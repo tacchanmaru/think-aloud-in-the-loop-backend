@@ -1,0 +1,16 @@
+{
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.tabSize": 2,
+    "editor.formatOnType": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": true,
+      "source.organizeImports.ruff": true
+    }
+  },
+  "python.analysis.typeCheckingMode": "basic",
+  "python.defaultInterpreterPath": ".venv/bin/python",
+  "python.analysis.extraPaths": [".venv/lib/python3.11/site-packages"],
+  "cSpell.words": ["dotenv"]
+}
