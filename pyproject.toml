@@ -21,6 +21,11 @@ dev-dependencies = [
     "ruff>=0.0.289",
 ]
 
+packages = [
+    { include = "src" },
+    { include = "script" },
+]
+
 [tool.hatch.metadata]
 allow-direct-references = true
 
