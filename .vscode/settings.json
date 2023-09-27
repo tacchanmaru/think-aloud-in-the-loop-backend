@@ -11,6 +11,7 @@
   },
   "python.analysis.typeCheckingMode": "basic",
   "python.defaultInterpreterPath": ".venv/bin/python",
-  "python.analysis.extraPaths": [".venv/lib/python3.11/site-packages"],
+  "python.analysis.extraPaths": ["${workspaceFolder}", ".venv/lib/python3.11/site-packages"],
+  "python.autoComplete.extraPaths": ["${workspaceFolder}", ".venv/lib/python3.11/site-packages"],
   "cSpell.words": ["dotenv"]
 }
