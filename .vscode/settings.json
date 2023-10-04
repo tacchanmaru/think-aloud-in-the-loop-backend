@@ -11,7 +11,10 @@
   },
   "python.analysis.typeCheckingMode": "basic",
   "python.defaultInterpreterPath": ".venv/bin/python",
+  "python.languageServer": "Default",
   "python.analysis.extraPaths": ["${workspaceFolder}", ".venv/lib/python3.11/site-packages"],
   "python.autoComplete.extraPaths": ["${workspaceFolder}", ".venv/lib/python3.11/site-packages"],
+  "gutterpreview.imagePreviewMaxWidth": 256,
+  "gutterpreview.imagePreviewMaxHeight": 256,
   "cSpell.words": ["dotenv"]
 }
