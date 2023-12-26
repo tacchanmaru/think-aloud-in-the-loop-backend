@@ -21,13 +21,11 @@ dev-dependencies = [
     "ruff>=0.0.289",
 ]
 
-packages = [
-    { include = "src" },
-    { include = "script" },
-]
-
 [tool.rye.scripts]
 clean = "find . ( -type d -name '__pycache__' -o -type f -name '*.log' -o -type d -name './.ruff_cache' -o -type d -name './.venv' -o -type d -name './logs' ) -exec rm -r {} ;"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src", "script"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
