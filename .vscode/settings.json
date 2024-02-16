@@ -1,7 +1,7 @@
 {
   "[python]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.tabSize": 4,
     "editor.formatOnType": true,
     "editor.codeActionsOnSave": {
@@ -12,9 +12,17 @@
   "python.analysis.typeCheckingMode": "basic",
   "python.defaultInterpreterPath": ".venv/bin/python",
   "python.languageServer": "Default",
-  "python.analysis.extraPaths": ["${workspaceFolder}", ".venv/lib/python3.11/site-packages"],
-  "python.autoComplete.extraPaths": ["${workspaceFolder}", ".venv/lib/python3.11/site-packages"],
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}",
+    ".venv/lib/python3.11/site-packages"
+  ],
+  "python.autoComplete.extraPaths": [
+    "${workspaceFolder}",
+    ".venv/lib/python3.11/site-packages"
+  ],
   "gutterpreview.imagePreviewMaxWidth": 256,
   "gutterpreview.imagePreviewMaxHeight": 256,
-  "cSpell.words": ["dotenv"]
+  "cSpell.words": [
+    "dotenv"
+  ]
 }
