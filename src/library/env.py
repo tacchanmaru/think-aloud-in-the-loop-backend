@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv
 
-from src.library.log.logger import logger
+from src.library.logger import logger
 
 load_dotenv()
 
