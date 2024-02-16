@@ -20,9 +20,4 @@
     "${workspaceFolder}",
     ".venv/lib/python3.11/site-packages"
   ],
-  "gutterpreview.imagePreviewMaxWidth": 256,
-  "gutterpreview.imagePreviewMaxHeight": 256,
-  "cSpell.words": [
-    "dotenv"
-  ]
 }
