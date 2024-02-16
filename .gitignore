@@ -8,3 +8,13 @@ wheels/
 
 # venv
 .venv
+
+.env
+
+cache/*
+data/*
+dataset/*
+assets/*
+tmp/*
+logs/*
+*.log
