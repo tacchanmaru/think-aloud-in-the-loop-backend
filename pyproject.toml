@@ -20,7 +20,7 @@ build-backend = "hatchling.build"
 [tool.rye]
 managed = true
 dev-dependencies = [
-    "ruff>=0.0.289",
+    "ruff>=0.1.9",
 ]
 
 [tool.rye.scripts]
@@ -36,7 +36,7 @@ allow-direct-references = true
 [tool.ruff]
 target-version = "py311"
 
-line-length = 150
+line-length = 120
 select = ["ALL"]
 
 unfixable = ["ERA001", "F401", "F841"]
