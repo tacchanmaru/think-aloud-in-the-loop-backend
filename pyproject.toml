@@ -6,10 +6,7 @@ authors = [
     { name = "Kohei Kumazawa", email = "48900989+dfc22@users.noreply.github.com" },
     { name = "Hodaka Ueda", email = "35979840+hodhodhod@users.noreply.github.com" }
 ]
-dependencies = [
-    "python-dotenv>=1.0.0",
-    "pyhumps>=3.8.0",
-]
+dependencies = []
 readme = "README.md"
 requires-python = ">= 3.11"
 
