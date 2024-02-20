@@ -8,10 +8,6 @@ Describe your project here.
 
 <https://rye-up.com/guide/installation/>
 
-2. pre-commit
-
-<https://pre-commit.com/#install>
-
 ## Setup
 
 1. rye
