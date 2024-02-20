@@ -23,5 +23,5 @@ rye sync
 2. pre-commit
 
 ```bash
-pre-commit install
+rye run pre-commit install
 ```

@@ -16,7 +16,10 @@ build-backend = "hatchling.build"
 
 [tool.rye]
 managed = true
-dev-dependencies = ["ruff>=0.2.1"]
+dev-dependencies = [
+    "ruff>=0.2.2",
+    "pre-commit>=3.6.2",
+]
 
 [tool.rye.scripts]
 clean = "find . ( -type d -name '__pycache__' -o -type f -name '*.log' -o -type d -name './.ruff_cache' -o -type d -name './.venv' -o -type d -name './logs' ) -exec rm -r {} ;"
