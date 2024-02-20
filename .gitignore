@@ -18,3 +18,5 @@ assets/*
 tmp/*
 logs/*
 *.log
+
+script/test.py
