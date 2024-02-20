@@ -6,6 +6,8 @@ dist/
 wheels/
 *.egg-info
 
+.ruff_cache
+
 # venv
 .venv
 
@@ -18,6 +20,3 @@ assets/*
 tmp/*
 logs/*
 *.log
-
-script/test.py
-script/test_*.py
