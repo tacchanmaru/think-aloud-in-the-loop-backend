@@ -8,7 +8,7 @@ authors = [
 ]
 dependencies = []
 readme = "README.md"
-requires-python = ">= 3.11"
+requires-python = ">= 3.12"
 
 [build-system]
 requires = ["hatchling"]
@@ -19,7 +19,7 @@ managed = true
 dev-dependencies = ["ruff>=0.2.2", "pre-commit>=3.6.2"]
 
 [tool.rye.scripts]
-clean = "find . ( -type d -name '__pycache__' -o -type f -name '*.log' -o -type d -name './.ruff_cache' -o -type d -name './.venv' -o -type d -name './logs' ) -exec rm -r {} ;"
+clean = "find . ( -type d -name '__pycache__' -o -type f -name '*.log' -o -type d -name '.ruff_cache' -o -type d -name '.venv' -o -type d -name 'logs' ) -exec rm -r {} ;"
 execute = "rye run python3 script/__execute__.py"
 
 [tool.hatch.build.targets.wheel]
@@ -29,22 +29,20 @@ packages = ["src", "script"]
 allow-direct-references = true
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 
 line-length = 100
+
 [tool.ruff.format]
 docstring-code-format = true
-skip-magic-trailing-comma = true
 
 [tool.ruff.lint]
 select = ["ALL"]
-
 unfixable = [
     "F401",   # unused import
     "F841",   # unused variable
     "ERA001", # commented out code
 ]
-
 ignore = [
     "ANN101", # missing type self
     "ANN102", # missing type cls

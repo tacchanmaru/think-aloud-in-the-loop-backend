@@ -12,10 +12,10 @@ FORMATTER = Formatter(
 
 TOKYO = timezone(timedelta(hours=9))
 TIMEZONE = TOKYO
-now = datetime.now(tz=TIMEZONE).strftime("%Y-%m-%d_%Hh%Mm%Ss")
 
-LOG_DIR_PATH.mkdir(parents=True, exist_ok=True)
+now = datetime.now(tz=TIMEZONE).strftime("%Y-%m-%d_%Hh%Mm%Ss")
 log_file = LOG_DIR_PATH / f"{now}.log"
+LOG_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
 stream_handler = StreamHandler()
 file_handler = FileHandler(log_file)

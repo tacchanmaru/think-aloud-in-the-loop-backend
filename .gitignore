@@ -20,3 +20,4 @@ logs/*
 *.log
 
 script/test.py
+script/test_*.py

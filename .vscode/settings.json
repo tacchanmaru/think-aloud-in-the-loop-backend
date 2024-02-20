@@ -14,11 +14,11 @@
   "python.languageServer": "Default",
   "python.analysis.extraPaths": [
     "${workspaceFolder}",
-    ".venv/lib/python3.11/site-packages"
+    ".venv/lib/python3.12/site-packages"
   ],
   "python.autoComplete.extraPaths": [
     "${workspaceFolder}",
-    ".venv/lib/python3.11/site-packages"
+    ".venv/lib/python3.12/site-packages"
   ],
   "[toml]": {
     "editor.defaultFormatter": "tamasfe.even-better-toml"
