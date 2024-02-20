@@ -9,6 +9,10 @@
       "source.organizeImports.ruff": "explicit"
     }
   },
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.autoFormatStrings": true,
+  "python.analysis.completeFunctionParens": true,
+  "python.analysis.diagnosticMode": "workspace",
   "python.analysis.typeCheckingMode": "basic",
   "python.defaultInterpreterPath": ".venv/bin/python",
   "python.languageServer": "Default",
@@ -22,5 +26,5 @@
   ],
   "[toml]": {
     "editor.defaultFormatter": "tamasfe.even-better-toml"
-  }
+  },
 }
