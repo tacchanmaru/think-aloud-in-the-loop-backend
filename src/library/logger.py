@@ -1,29 +1,30 @@
-import datetime
-import logging
+from datetime import datetime, timedelta, timezone
+from logging import INFO, FileHandler, Formatter, Handler, StreamHandler, basicConfig, getLogger
 from pathlib import Path
 
-now = int(datetime.datetime.now(tz=datetime.UTC).timestamp())
+LOG_LEVEL = INFO
+LOG_DIR_PATH = Path("logs")
 
-LOG_LEVEL = logging.INFO
-LOG_DIR_PATH = "logs"
-
-if not Path(LOG_DIR_PATH).exists():
-    Path(LOG_DIR_PATH).mkdir(parents=True, exist_ok=True)
-
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(LOG_LEVEL)
-stream_handler.setFormatter(
-    logging.Formatter("[%(asctime)s]:%(levelname)s:%(message)s"),
+FORMATTER = Formatter(
+    fmt="[%(asctime)s]:%(levelname)s:%(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S(%Z)",
 )
 
-LOG_FILE = f"{LOG_DIR_PATH}/{now}.log"
+TOKYO = timezone(timedelta(hours=9))
+TIMEZONE = TOKYO
+now = datetime.now(tz=TIMEZONE).strftime("%Y-%m-%d_%Hh%Mm%Ss")
 
+LOG_DIR_PATH.mkdir(parents=True, exist_ok=True)
+log_file = LOG_DIR_PATH / f"{now}.log"
 
-file_handler = logging.FileHandler(LOG_FILE)
-file_handler.setLevel(LOG_LEVEL)
-file_handler.setFormatter(logging.Formatter("[%(asctime)s]:%(levelname)s:%(message)s"))
+stream_handler = StreamHandler()
+file_handler = FileHandler(log_file)
+handlers: list[Handler] = [stream_handler, file_handler]
+for handler in handlers:
+    handler.setLevel(LOG_LEVEL)
+    handler.setFormatter(FORMATTER)
 
-logging.basicConfig(level=logging.INFO, handlers=[stream_handler, file_handler])
-logger = logging.getLogger(__name__)
+basicConfig(level=LOG_LEVEL, handlers=handlers)
+logger = getLogger(__name__)
 
-logger.info("log file is %s.log", f"{LOG_DIR_PATH}/{now}")
+logger.info("log file is %s", log_file)

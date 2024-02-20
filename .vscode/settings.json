@@ -20,4 +20,7 @@
     "${workspaceFolder}",
     ".venv/lib/python3.11/site-packages"
   ],
+  "[toml]": {
+    "editor.defaultFormatter": "tamasfe.even-better-toml"
+  }
 }

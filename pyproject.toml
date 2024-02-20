@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 authors = [
     { name = "Kohei Kumazawa", email = "48900989+dfc22@users.noreply.github.com" },
-    { name = "Hodaka Ueda", email = "35979840+hodhodhod@users.noreply.github.com" }
+    { name = "Hodaka Ueda", email = "35979840+hodhodhod@users.noreply.github.com" },
 ]
 dependencies = []
 readme = "README.md"
@@ -16,9 +16,7 @@ build-backend = "hatchling.build"
 
 [tool.rye]
 managed = true
-dev-dependencies = [
-    "ruff>=0.2.1",
-]
+dev-dependencies = ["ruff>=0.2.1"]
 
 [tool.rye.scripts]
 clean = "find . ( -type d -name '__pycache__' -o -type f -name '*.log' -o -type d -name './.ruff_cache' -o -type d -name './.venv' -o -type d -name './logs' ) -exec rm -r {} ;"
@@ -36,6 +34,20 @@ target-version = "py311"
 line-length = 100
 select = ["ALL"]
 
-unfixable = ["ERA001", "F401", "F841"]
+unfixable = [
+    "F401",   # unused import
+    "F841",   # unused variable
+    "ERA001", # commented out code
+]
 
-ignore = ["ANN101", "ANN102", "TD", "D", "PGH003", "PGH004"]
+ignore = [
+    "ANN101", # missing type self
+    "ANN102", # missing type cls
+    "TD001",  # invald todo tag
+    "TD002",  # missing todo author
+    "TD003",  # missing todo link
+    "D",      # pydocstyle
+]
+
+[tool.ruff.lint]
+logger-objects = ["src.library.logger.logger"]

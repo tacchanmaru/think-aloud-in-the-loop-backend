@@ -1,11 +1,9 @@
-import importlib
-import sys
+from importlib import import_module as __import_module
+from sys import argv as __argv
 
+from src.library.util import kebab_to_snake_case as __kebab_to_snake_case
 
-def kebab_to_snake_case(string: str) -> str:
-    return string.replace("-", "_")
-
-
-__module_name = kebab_to_snake_case(f"script.{sys.argv[1]}")
-__executable = importlib.import_module(__module_name)
-__executable.execute()
+if __name__ == "__main__":
+    __module_name = __kebab_to_snake_case(f"script.{__argv[1]}")
+    __executable = __import_module(__module_name)
+    __executable.execute()
