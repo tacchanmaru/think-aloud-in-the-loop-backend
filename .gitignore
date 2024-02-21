@@ -13,10 +13,6 @@ wheels/
 
 .env
 
-cache/*
 data/*
-dataset/*
-assets/*
-tmp/*
 logs/*
 *.log
