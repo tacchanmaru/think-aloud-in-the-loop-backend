@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from logging import INFO, FileHandler, Formatter, Handler, StreamHandler, basicConfig, getLogger
 from pathlib import Path
+from sys import argv
 
 LOG_LEVEL = INFO
 LOG_DIR_PATH = Path("logs")
@@ -14,8 +15,8 @@ TOKYO = timezone(timedelta(hours=9))
 TIMEZONE = TOKYO
 
 now = datetime.now(tz=TIMEZONE).strftime("%Y-%m-%d_%Hh%Mm%Ss")
-log_file = LOG_DIR_PATH / f"{now}.log"
-LOG_DIR_PATH.mkdir(parents=True, exist_ok=True)
+log_file = LOG_DIR_PATH / f"{argv[1]}_{now}.log"
+log_file.parent.mkdir(parents=True, exist_ok=True)
 
 stream_handler = StreamHandler()
 file_handler = FileHandler(log_file)
