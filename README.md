@@ -8,6 +8,10 @@ Describe your project here.
 
 <https://rye-up.com/guide/installation/>
 
+```bash
+brew install rye
+```
+
 ## Setup
 
 1. rye
@@ -20,4 +24,18 @@ rye sync
 
 ```bash
 rye run pre-commit install
+```
+
+## add package
+
+```bash
+rye add ${package}
+```
+
+## execute your script
+
+To execute ${script/your_script.py}
+
+```bash
+rye run execute ${your-script}
 ```

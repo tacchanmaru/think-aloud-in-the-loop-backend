@@ -17,11 +17,11 @@
   "python.analysis.typeCheckingMode": "basic",
   "python.analysis.extraPaths": [
     "${workspaceFolder}",
-    ".venv/lib/python3.12/site-packages"
+    ".venv/lib/python3.*/site-packages"
   ],
   "python.autoComplete.extraPaths": [
     "${workspaceFolder}",
-    ".venv/lib/python3.12/site-packages"
+    ".venv/lib/python3.*/site-packages"
   ],
   "[toml]": {
     "editor.defaultFormatter": "tamasfe.even-better-toml"
