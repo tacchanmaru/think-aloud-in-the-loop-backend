@@ -4,6 +4,7 @@
     "ms-python.vscode-pylance",
     "charliermarsh.ruff",
     "tamasfe.even-better-toml",
+    "esbenp.prettier-vscode",
     "streetsidesoftware.code-spell-checker"
   ]
 }
