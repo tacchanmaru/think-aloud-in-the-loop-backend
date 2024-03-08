@@ -12,6 +12,13 @@ Describe your project here.
 brew install rye
 ```
 
+2. taplo
+   Formatter for TOML.
+
+```bash
+brew install taplo
+```
+
 ## Change Python's version
 
 ```bash

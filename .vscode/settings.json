@@ -21,11 +21,10 @@
   "[yaml]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  "cSpell.words": [
-    "autofix"
-  ],
+  "cSpell.words": ["taplo"],
+  "evenBetterToml.formatter.alignEntries": false,
   "evenBetterToml.formatter.compactArrays": true,
-  "evenBetterToml.formatter.compactInlineTables": true,
+  "evenBetterToml.formatter.indentString": "  ",
   "prettier.singleQuote": true,
   "prettier.tabWidth": 2,
   "python.analysis.autoFormatStrings": true,
