@@ -21,10 +21,7 @@
   "[yaml]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  "cSpell.words": ["taplo"],
-  "evenBetterToml.formatter.alignEntries": false,
-  "evenBetterToml.formatter.compactArrays": true,
-  "evenBetterToml.formatter.indentString": "  ",
+
   "python.analysis.autoFormatStrings": true,
   "python.analysis.autoImportCompletions": true,
   "python.analysis.diagnosticMode": "workspace",
@@ -38,5 +35,20 @@
     ".venv/lib/python3.*/site-packages"
   ],
   "python.defaultInterpreterPath": ".venv/bin/python",
-  "python.languageServer": "Default"
+  "python.languageServer": "Default",
+
+  "cSpell.words": ["pycache", "pydocstyle", "taplo", "unfixable", "venv"],
+  "cSpell.diagnosticLevel": "Warning",
+  "cSpell.enableFiletypes": ["python", "markdown", "yaml", "toml"],
+  "cSpell.enabledLanguageIds": [
+    "json",
+    "jsonc",
+    "markdown",
+    "plaintext",
+    "python",
+    "text",
+    "yaml",
+    "toml"
+  ],
+  "cSpell.ignorePaths": [".vscode", "requirements*.lock"]
 }

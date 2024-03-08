@@ -4,16 +4,17 @@ Describe your project here.
 
 ## Installation
 
-1. rye
+### rye
 
-<https://rye-up.com/guide/installation/>
+Package manager for Python.
 
 ```bash
 brew install rye
 ```
 
-2. taplo
-   Formatter for TOML.
+### taplo
+
+Formatter for TOML.
 
 ```bash
 brew install taplo
@@ -21,19 +22,21 @@ brew install taplo
 
 ## Change Python's version
 
+To change your python's version into _3.x_
+
 ```bash
-rye pin ${version}
+rye pin ${3.x}
 ```
 
 ## Setup
 
-1. rye
+### rye
 
 ```bash
 rye sync
 ```
 
-2. pre-commit
+### pre-commit
 
 ```bash
 rye run pre-commit install
@@ -47,7 +50,7 @@ rye add ${package}
 
 ## Execute your script
 
-To execute ${script/your_script.py}
+To execute _script/your_script.py_
 
 ```bash
 rye run execute ${your-script}
