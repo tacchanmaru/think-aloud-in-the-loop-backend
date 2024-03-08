@@ -20,7 +20,13 @@ Formatter for TOML.
 brew install taplo
 ```
 
-### Visual Studio Code Extensions
+### Visual Studio Code
+
+```bash
+brew install visual-studio-code
+```
+
+#### Visual Studio Code Extensions
 
 ```bash
 code --install-extension ms-python.python

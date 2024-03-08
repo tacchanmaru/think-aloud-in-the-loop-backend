@@ -38,6 +38,7 @@
   "python.languageServer": "Default",
 
   "evenBetterToml.formatter.arrayAutoCollapse": false,
+  "evenBetterToml.formatter.indentString": "    ",
 
   "cSpell.words": [
     "esbenp",
