@@ -12,6 +12,12 @@ Describe your project here.
 brew install rye
 ```
 
+## Change Python's version
+
+```bash
+rye pin ${version}
+```
+
 ## Setup
 
 1. rye
@@ -26,13 +32,13 @@ rye sync
 rye run pre-commit install
 ```
 
-## add package
+## Add package
 
 ```bash
 rye add ${package}
 ```
 
-## execute your script
+## Execute your script
 
 To execute ${script/your_script.py}
 
