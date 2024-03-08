@@ -39,7 +39,16 @@
 
   "evenBetterToml.formatter.arrayAutoCollapse": false,
 
-  "cSpell.words": ["pycache", "pydocstyle", "taplo", "unfixable", "venv"],
+  "cSpell.words": [
+    "esbenp",
+    "pycache",
+    "pydocstyle",
+    "pylance",
+    "tamasfe",
+    "taplo",
+    "unfixable",
+    "venv"
+  ],
   "cSpell.diagnosticLevel": "Warning",
   "cSpell.enableFiletypes": ["python", "markdown", "yaml", "toml"],
   "cSpell.enabledLanguageIds": [
