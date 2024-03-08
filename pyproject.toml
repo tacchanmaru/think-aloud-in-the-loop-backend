@@ -45,7 +45,10 @@ unfixable = [
 ]
 
 [tool.rye]
-dev-dependencies = ["ruff>=0.3.1", "pre-commit>=3.6.2"]
+dev-dependencies = [
+  "ruff>=0.3.1",
+  "pre-commit>=3.6.2",
+]
 managed = true
 
 [tool.rye.scripts]

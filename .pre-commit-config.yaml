@@ -31,6 +31,6 @@ repos:
         name: taplo
         language: system
         entry: taplo
-        args: [fmt]
+        args: [fmt, --option, "array_auto_collapse=false"]
         types:
           - toml
