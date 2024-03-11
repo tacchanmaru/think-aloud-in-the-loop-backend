@@ -10,7 +10,8 @@
     "editor.tabSize": 4
   },
   "[toml]": {
-    "editor.defaultFormatter": "tamasfe.even-better-toml"
+    "editor.defaultFormatter": "tamasfe.even-better-toml",
+    "editor.tabSize": 4
   },
   "[yaml]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
