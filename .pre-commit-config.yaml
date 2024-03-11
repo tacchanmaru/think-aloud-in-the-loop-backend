@@ -31,6 +31,13 @@ repos:
         name: taplo
         language: system
         entry: taplo
-        args: [fmt, --option, "array_auto_collapse=false indent_string='    '"]
+        args:
+          [
+            fmt,
+            --option,
+            "array_auto_collapse=false",
+            --option,
+            "indent_string=    ",
+          ]
         types:
           - toml

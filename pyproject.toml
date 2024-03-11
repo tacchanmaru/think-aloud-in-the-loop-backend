@@ -4,8 +4,8 @@ requires = ["hatchling"]
 
 [project]
 authors = [
-  { name = "Kohei Kumazawa", email = "48900989+dfc22@users.noreply.github.com" },  # cspell:disable-line
-  { name = "Hodaka Ueda", email = "35979840+hodhodhod@users.noreply.github.com" }, # cspell:disable-line
+    { name = "Kohei Kumazawa", email = "48900989+dfc22@users.noreply.github.com" },  # cspell:disable-line
+    { name = "Hodaka Ueda", email = "35979840+hodhodhod@users.noreply.github.com" }, # cspell:disable-line
 ]
 dependencies = []
 description = "Add your description here"
@@ -28,26 +28,26 @@ docstring-code-format = true
 
 [tool.ruff.lint]
 ignore = [
-  "ANN101", # missing type self
-  "ANN102", # missing type cls
-  "TD001",  # invalid todo tag
-  "TD002",  # missing todo author
-  "TD003",  # missing todo link
-  "D",      # pydocstyle
+    "ANN101", # missing type self
+    "ANN102", # missing type cls
+    "TD001",  # invalid todo tag
+    "TD002",  # missing todo author
+    "TD003",  # missing todo link
+    "D",      # pydocstyle
 ]
 
 logger-objects = ["src.library.logger.logger"]
 select = ["ALL"]
 unfixable = [
-  "F401",   # unused import
-  "F841",   # unused variable
-  "ERA001", # commented out code
+    "F401",   # unused import
+    "F841",   # unused variable
+    "ERA001", # commented out code
 ]
 
 [tool.rye]
 dev-dependencies = [
-  "ruff>=0.3.1",
-  "pre-commit>=3.6.2",
+    "ruff>=0.3.1",
+    "pre-commit>=3.6.2",
 ]
 managed = true
 
