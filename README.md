@@ -39,7 +39,7 @@ code --install-extension streetsidesoftware.code-spell-checker
 
 ## Setup
 
-### Rye
+### First Sync
 
 ```bash
 rye sync
@@ -56,7 +56,7 @@ rye run pre-commit install
 To change your python's version into _3.x_
 
 ```bash
-rye pin ${3.x}
+rye pin <3.x>
 ```
 
 ## Add package
@@ -64,13 +64,13 @@ rye pin ${3.x}
 To add _python-package_
 
 ```bash
-rye add ${python-package}
+rye add <python-package>
 ```
 
 ## Execute your script
 
-To execute _script/your_script.py_
+To execute *script/your_script.py*
 
 ```bash
-rye run execute ${your-script}
+rye run execute <your-script>
 ```

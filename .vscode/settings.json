@@ -20,7 +20,9 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "[markdown]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.codeActionsOnSave": {
+      "source.fixAll.markdownlint": "explicit"
+    }
   },
 
   "python.analysis.autoFormatStrings": true,
@@ -30,6 +32,7 @@
     "${workspaceFolder}",
     ".venv/lib/python3.*/site-packages"
   ],
+  "python.analysis.ignore": [".venv/lib/python3.*/site-packages"],
   "python.analysis.typeCheckingMode": "basic",
   "python.autoComplete.extraPaths": [
     "${workspaceFolder}",
@@ -43,6 +46,7 @@
 
   "cSpell.words": [
     "esbenp",
+    "markdownlint",
     "pycache",
     "pydocstyle",
     "pylance",
