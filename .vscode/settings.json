@@ -44,28 +44,5 @@
   "evenBetterToml.formatter.arrayAutoCollapse": false,
   "evenBetterToml.formatter.indentString": "    ",
 
-  "cSpell.words": [
-    "esbenp",
-    "markdownlint",
-    "pycache",
-    "pydocstyle",
-    "pylance",
-    "tamasfe",
-    "taplo",
-    "unfixable",
-    "venv"
-  ],
-  "cSpell.diagnosticLevel": "Warning",
-  "cSpell.enableFiletypes": ["python", "markdown", "yaml", "toml"],
-  "cSpell.enabledLanguageIds": [
-    "json",
-    "jsonc",
-    "markdown",
-    "plaintext",
-    "python",
-    "text",
-    "yaml",
-    "toml"
-  ],
-  "cSpell.ignorePaths": [".vscode", "requirements*.lock"]
+  "cSpell.diagnosticLevel": "Warning"
 }

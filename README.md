@@ -26,17 +26,6 @@ brew install taplo
 brew install visual-studio-code
 ```
 
-#### Visual Studio Code Extensions
-
-```bash
-code --install-extension ms-python.python
-code --install-extension ms-python.vscode-pylance
-code --install-extension charliermarsh.ruff
-code --install-extension tamasfe.even-better-toml
-code --install-extension esbenp.prettier-vscode
-code --install-extension streetsidesoftware.code-spell-checker
-```
-
 ## Setup
 
 ### First Sync
@@ -53,7 +42,7 @@ rye run pre-commit install
 
 ## Change Python's version
 
-To change your python's version into _3.x_
+To change your python's version into *3.x*
 
 ```bash
 rye pin <3.x>
@@ -61,7 +50,7 @@ rye pin <3.x>
 
 ## Add package
 
-To add _python-package_
+To add *python-package*
 
 ```bash
 rye add <python-package>
