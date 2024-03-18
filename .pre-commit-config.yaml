@@ -35,7 +35,6 @@ repos:
     rev: v8.6.0
     hooks:
       - id: cspell
-        args: [--config, ".vscode/settings.json"]
 
   - repo: local
     hooks:
