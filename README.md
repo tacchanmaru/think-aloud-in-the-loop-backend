@@ -46,6 +46,7 @@ To change your python's version into *3.x*
 
 ```bash
 rye pin <3.x>
+rye sync
 ```
 
 ## Add package
@@ -54,6 +55,7 @@ To add *python-package*
 
 ```bash
 rye add <python-package>
+rye sync
 ```
 
 ## Execute your script

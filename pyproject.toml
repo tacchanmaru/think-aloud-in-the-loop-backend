@@ -4,8 +4,10 @@ requires = ["hatchling"]
 
 [project]
 authors = [
-    { name = "Kohei Kumazawa", email = "48900989+dfc22@users.noreply.github.com" },  # cspell:disable-line
-    { name = "Hodaka Ueda", email = "35979840+hodhodhod@users.noreply.github.com" }, # cspell:disable-line
+    # cSpell:disable
+    { name = "Kohei Kumazawa", email = "48900989+dfc22@users.noreply.github.com" },
+    { name = "Hodaka Ueda", email = "35979840+hodhodhod@users.noreply.github.com" },
+    # cSpell:enable
 ]
 dependencies = []
 description = "Add your description here"
