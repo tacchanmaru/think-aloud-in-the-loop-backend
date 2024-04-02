@@ -38,7 +38,7 @@ ignore = [
     "D",      # pydocstyle
 ]
 
-logger-objects = ["src.library.logger.logger"]
+logger-objects = ["src.library.logger.LOGGER"]
 select = ["ALL"]
 unfixable = [
     "F401",   # unused import
