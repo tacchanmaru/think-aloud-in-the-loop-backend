@@ -19,5 +19,6 @@
     "yaml",
     "toml"
   ],
-  "ignorePaths": [".vscode", "requirements*.lock"]
+  "ignorePaths": [".vscode", "requirements*.lock"],
+  "dictionaries": ["python"]
 }
