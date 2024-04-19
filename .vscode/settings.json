@@ -33,6 +33,7 @@
     ".venv/lib/python3.*/site-packages"
   ],
   "python.analysis.ignore": [".venv/lib/python3.*/site-packages"],
+  "python.analysis.importFormat": "absolute",
   "python.analysis.typeCheckingMode": "basic",
   "python.autoComplete.extraPaths": [
     "${workspaceFolder}",
