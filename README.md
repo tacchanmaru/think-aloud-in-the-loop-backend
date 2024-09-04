@@ -20,12 +20,6 @@ Formatter for TOML.
 brew install taplo
 ```
 
-### Visual Studio Code
-
-```bash
-brew install visual-studio-code
-```
-
 ## Setup
 
 ### First Sync
@@ -58,10 +52,12 @@ rye add <python-package>
 rye sync
 ```
 
-## Execute your script
+## Enable logger
 
-To execute *script/your_script.py*
+To enable logger, place `.env` on project root
 
-```bash
-rye run execute <your-script>
+```properties:.env
+LOG_LEVEL=INFO
+LOG_DIR=/path/to/log/dir
+TZ=Asia/Tokyo
 ```

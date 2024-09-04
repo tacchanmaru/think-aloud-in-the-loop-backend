@@ -1,5 +1,6 @@
 {
   "words": [
+    "dotenv",
     "levelname",
     "markdownlint",
     "pycache",
