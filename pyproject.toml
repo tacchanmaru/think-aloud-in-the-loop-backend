@@ -19,7 +19,7 @@ requires-python = ">= 3.12"
 version = "0.1.0"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src", "script"]
+packages = ["src"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -27,35 +27,58 @@ allow-direct-references = true
 [tool.ruff]
 line-length = 100
 
-[tool.ruff.format]
-docstring-code-format = true
+
+logger-objects = ["src.lib.logger.LOGGER"]
+
 
 [tool.ruff.lint]
-select = ["ALL"]
 ignore = [
-    "ANN1",  # missing type self and cls
-    "E999",  # syntax error
-    "UP027", # unpacked list comprehension
-    "PT004", # pytest missing fixture name underscore
-    "PT005", # pytest incorrect fixture name underscore
-    "D1",    # undocumented
     "TD001", # invalid todo tag
     "TD002", # missing todo author
     "TD003", # missing todo link
-]
-unfixable = [
-    "F401",   # unused import
-    "F841",   # unused variable
-    "ERA001", # commented out code
+    "D1",    # missing docstring
+    "D203",  # one blank line before class
+    "D213",  # multi-line summary second line
+    "PD011", # pandas use of dot values
 ]
 
 logger-objects = ["src.library.logger.LOGGER"]
 
 
-[tool.rye]
+[tool.ruff.lint.pycodestyle]
+max-line-length = 102
+
+
+[tool.ruff.lint.pylint]
+max-args = 8
+
+
+[tool.uv]
 dev-dependencies = [
-    "ruff>=0.3.1",
-    "pre-commit>=3.6.2",
+    "pre-commit>=4.0.1",
+    "pyright>=1.1.390",
+    "ruff>=0.8.2",
 ]
 managed = true
-virtual = true
+
+index-strategy = "unsafe-best-match"
+
+
+[[tool.uv.index]]
+name = "nvidia"
+url = "https://pypi.nvidia.com"
+
+
+[tool.pyright]
+ignore = [".venv/lib/python3.*/site-packages"]
+include = ["src"]
+exclude = ["typings"]
+extraPaths = [
+    "${workspaceFolder}",
+    ".venv/lib/python3.*/site-packages",
+]
+importFormat = "absolute"
+typeCheckingMode = "basic"
+reportUnnecessaryTypeIgnoreComment = "warning"
+enableTypeIgnoreComments = false
+deprecateTypingAliases = true

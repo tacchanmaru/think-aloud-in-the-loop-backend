@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from src.library.env import ENV
+from src.lib.env import ENV
 
 
 def get_log_level(level_name: str) -> int:
@@ -43,7 +43,7 @@ class Logger(logging.getLoggerClass()):
     def __new__(cls) -> logging.Logger:
         if not cls._is_instanced:
             cls._is_instanced = True
-            configure_root_logger()
+            # configure_root_logger()
         return logging.getLogger(__name__)
 
 

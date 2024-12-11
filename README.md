@@ -4,20 +4,11 @@ Describe your project here.
 
 ## Installation
 
-### Rye
-
-Package manager for Python.
+### Taskfile
 
 ```bash
-brew install rye
-```
-
-### Taplo
-
-Formatter for TOML.
-
-```bash
-brew install taplo
+brew install go-task
+task install
 ```
 
 ## Setup
@@ -25,7 +16,7 @@ brew install taplo
 ### First Sync
 
 ```bash
-rye sync
+rye sync --no-lock
 ```
 
 ### Pre-commit
@@ -40,15 +31,6 @@ To change your python's version into *3.x*
 
 ```bash
 rye pin <3.x>
-rye sync
-```
-
-## Add package
-
-To add *python-package*
-
-```bash
-rye add <python-package>
 rye sync
 ```
 

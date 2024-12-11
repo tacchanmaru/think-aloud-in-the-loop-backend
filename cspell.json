@@ -1,25 +1,15 @@
 {
-  "words": [
-    "dotenv",
-    "levelname",
-    "markdownlint",
-    "pycache",
-    "pydocstyle",
-    "taplo",
-    "unfixable",
-    "venv"
-  ],
-  "enableFiletypes": ["python", "markdown", "yaml", "toml"],
-  "enabledLanguageIds": [
-    "json",
-    "jsonc",
-    "markdown",
-    "plaintext",
+  "words": ["charliermarsh", "esbenp", "pylance", "tamasfe", "taplo"],
+  "enableFiletypes": ["python", "markdown", "yaml", "toml", "json", "jsonc"],
+  "ignorePaths": [".vscode", ".venv", "typings", "uv.lock"],
+  "dictionaries": [
+    "cpp",
+    "softwareTerms",
     "python",
-    "text",
-    "yaml",
-    "toml"
-  ],
-  "ignorePaths": [".vscode", "requirements*.lock"],
-  "dictionaries": ["python"]
+    "npm",
+    "data-science",
+    "python-common",
+    "en_us",
+    "en-gb"
+  ]
 }

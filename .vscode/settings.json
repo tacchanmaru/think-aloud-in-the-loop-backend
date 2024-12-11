@@ -28,22 +28,14 @@
   "python.analysis.autoFormatStrings": true,
   "python.analysis.autoImportCompletions": true,
   "python.analysis.diagnosticMode": "workspace",
-  "python.analysis.extraPaths": [
-    "${workspaceFolder}",
-    ".venv/lib/python3.*/site-packages"
-  ],
-  "python.analysis.ignore": [".venv/lib/python3.*/site-packages"],
+
   "python.analysis.importFormat": "absolute",
-  "python.analysis.typeCheckingMode": "basic",
   "python.autoComplete.extraPaths": [
     "${workspaceFolder}",
     ".venv/lib/python3.*/site-packages"
   ],
   "python.defaultInterpreterPath": ".venv/bin/python",
   "python.languageServer": "Default",
-
-  "evenBetterToml.formatter.arrayAutoCollapse": false,
-  "evenBetterToml.formatter.indentString": "    ",
 
   "cSpell.diagnosticLevel": "Warning"
 }

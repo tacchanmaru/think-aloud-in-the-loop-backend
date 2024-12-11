@@ -1,0 +1,23 @@
+version: "3"
+
+tasks:
+  install:
+    cmds:
+      - brew install uv
+      - brew install visual-studio-code
+      - code --install-extension ms-python.python
+      - code --install-extension ms-python.vscode-pylance
+      - code --install-extension charliermarsh.ruff
+      - code --install-extension tamasfe.even-better-toml
+      - code --install-extension esbenp.prettier-vscode
+      - code --install-extension streetsidesoftware.code-spell-checker
+  install-ssh-client:
+    cmds:
+      - code --install-extension ms-vscode-remote.remote-ssh
+  init:
+    cmds:
+      - uv sync
+      - pre-commit install
+  update:
+    cmds:
+      - pre-commit autoupdate
