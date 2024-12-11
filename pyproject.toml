@@ -32,6 +32,7 @@ logger-objects = ["src.lib.logger.LOGGER"]
 
 
 [tool.ruff.lint]
+select = ["ALL"]
 ignore = [
     "TD001", # invalid todo tag
     "TD002", # missing todo author
