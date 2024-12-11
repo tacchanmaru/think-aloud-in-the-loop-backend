@@ -62,14 +62,6 @@ dev-dependencies = [
 ]
 managed = true
 
-index-strategy = "unsafe-best-match"
-
-
-[[tool.uv.index]]
-name = "nvidia"
-url = "https://pypi.nvidia.com"
-
-
 [tool.pyright]
 ignore = [".venv/lib/python3.*/site-packages"]
 include = ["src"]
