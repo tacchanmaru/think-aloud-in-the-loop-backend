@@ -14,8 +14,11 @@ tasks:
   init:
     cmds:
       - uv sync
-      - pre-commit install
+      - uvx pre-commit install
+  activate:
+    cmds:
+      - source .venv/bin/activate
   update:
     cmds:
       - uv sync -U
-      - pre-commit autoupdate
+      - uvx pre-commit autoupdate
