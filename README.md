@@ -13,25 +13,8 @@ task install
 
 ## Setup
 
-### First Sync
-
 ```bash
-rye sync --no-lock
-```
-
-### Pre-commit
-
-```bash
-rye run pre-commit install
-```
-
-## Change Python's version
-
-To change your python's version into *3.x*
-
-```bash
-rye pin <3.x>
-rye sync
+task init
 ```
 
 ## Enable logger
