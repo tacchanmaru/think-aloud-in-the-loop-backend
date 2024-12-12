@@ -22,3 +22,20 @@ tasks:
     cmds:
       - uv sync -U
       - uvx pre-commit autoupdate
+  create-init:
+    internal: true
+    status:
+      - test -f {{.DIR}}/__init__.py
+    cmds:
+      - touch {{.DIR}}/__init__.py
+      - task: create-init
+        vars:
+          DIR:
+            sh: dirname {{.DIR}}
+  mkdir:
+    cmds:
+      - mkdir -p {{.DIR}}
+      - task: create-init
+        vars:
+          DIR:
+            ref: .DIR
