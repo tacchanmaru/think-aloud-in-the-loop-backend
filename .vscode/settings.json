@@ -10,8 +10,7 @@
     "editor.tabSize": 4
   },
   "[toml]": {
-    "editor.defaultFormatter": "tamasfe.even-better-toml",
-    "editor.tabSize": 4
+    "editor.defaultFormatter": "tamasfe.even-better-toml"
   },
   "[yaml]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
@@ -22,7 +21,8 @@
   "[markdown]": {
     "editor.codeActionsOnSave": {
       "source.fixAll.markdownlint": "explicit"
-    }
+    },
+    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
   },
 
   "python.analysis.autoImportCompletions": true,
@@ -33,7 +33,7 @@
     ".venv/lib/python3.*/site-packages"
   ],
   "python.defaultInterpreterPath": ".venv/bin/python",
-  "python.languageServer": "Default",
+  "python.languageServer": "Pylance",
 
   "cSpell.diagnosticLevel": "Warning"
 }

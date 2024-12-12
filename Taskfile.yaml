@@ -20,4 +20,5 @@ tasks:
       - pre-commit install
   update:
     cmds:
+      - uv sync -U
       - pre-commit autoupdate
