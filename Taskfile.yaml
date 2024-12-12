@@ -11,9 +11,6 @@ tasks:
       - code --install-extension tamasfe.even-better-toml
       - code --install-extension esbenp.prettier-vscode
       - code --install-extension streetsidesoftware.code-spell-checker
-  install-ssh-client:
-    cmds:
-      - code --install-extension ms-vscode-remote.remote-ssh
   init:
     cmds:
       - uv sync
