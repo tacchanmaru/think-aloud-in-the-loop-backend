@@ -5,12 +5,17 @@ tasks:
     cmds:
       - brew install uv
       - brew install visual-studio-code
-      - code --install-extension ms-python.python
-      - code --install-extension ms-python.vscode-pylance
-      - code --install-extension charliermarsh.ruff
-      - code --install-extension tamasfe.even-better-toml
-      - code --install-extension esbenp.prettier-vscode
-      - code --install-extension streetsidesoftware.code-spell-checker
+      - task: install-extension
+
+  install-extension:
+    vars:
+      EXTENSIONS:
+        sh: jq -r '.recommendations[]' .vscode/extensions.json
+    cmds:
+      - for:
+          var: EXTENSIONS
+          as: EXT
+        cmd: code --install-extension {{.EXT}}
   init:
     cmds:
       - uv sync
