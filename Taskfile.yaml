@@ -22,20 +22,29 @@ tasks:
     cmds:
       - uv sync -U
       - uvx pre-commit autoupdate
+
   create-init:
     internal: true
+
     status:
-      - test -f {{.DIR}}/__init__.py
+      - test -f {{.DIRECTORY}}/__init__.py
     cmds:
-      - touch {{.DIR}}/__init__.py
-      - task: create-init
+      - touch {{.DIRECTORY}}/__init__.py
+
+  create-all-inits:
+    vars:
+      FIND_OPTIONS_GITIGNORE:
+        sh: git status --ignored -s | grep '^!! src/.*/$' | sed 's/^!!/! -path/g; s/\/$//g' | tr '\n' ' '
+      ALL_DIRS:
+        sh: find src -type d {{.FIND_OPTIONS_GITIGNORE}}
+    cmds:
+      - for:
+          var: ALL_DIRS
+          as: DIR
+        task: create-init
         vars:
-          DIR:
-            sh: dirname {{.DIR}}
+          DIRECTORY: "{{.DIR}}"
   mkdir:
     cmds:
       - mkdir -p {{.DIR}}
-      - task: create-init
-        vars:
-          DIR:
-            ref: .DIR
+      - task: create-all-inits
