@@ -27,6 +27,7 @@ tasks:
     cmds:
       - uv sync -U
       - uvx pre-commit autoupdate
+      - code --update-extensions
 
   create-init:
     internal: true
