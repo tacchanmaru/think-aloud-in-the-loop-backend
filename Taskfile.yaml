@@ -25,8 +25,11 @@ tasks:
       - source .venv/bin/activate
   update:
     cmds:
+      - brew update
+      - brew upgrade uv
       - uv sync -U
       - uvx pre-commit autoupdate
+      - brew upgrade visual-studio-code
       - code --update-extensions
 
   create-init:
