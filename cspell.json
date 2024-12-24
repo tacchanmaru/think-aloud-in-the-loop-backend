@@ -11,5 +11,6 @@
     "python-common",
     "en_us",
     "en-gb"
-  ]
+  ],
+  "useGitignore": true
 }
