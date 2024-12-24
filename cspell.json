@@ -1,7 +1,7 @@
 {
   "words": ["charliermarsh", "esbenp", "pylance", "tamasfe", "taplo"],
   "enableFiletypes": ["python", "markdown", "yaml", "toml", "json", "jsonc"],
-  "ignorePaths": [".vscode", ".venv", "typings", "uv.lock"],
+  "ignorePaths": ["typings", "uv.lock"],
   "dictionaries": [
     "cpp",
     "softwareTerms",
