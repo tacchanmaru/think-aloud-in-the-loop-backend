@@ -1,5 +1,16 @@
 {
-  "words": ["charliermarsh", "esbenp", "pylance", "tamasfe", "taplo"],
+  "words": [
+    "charliermarsh",
+    "esbenp",
+    "htmlcov",
+    "ipynb",
+    "nohup",
+    "pylance",
+    "pypirc",
+    "tamasfe",
+    "taplo",
+    "webassets"
+  ],
   "enableFiletypes": ["python", "markdown", "yaml", "toml", "json", "jsonc"],
   "ignorePaths": ["typings", "uv.lock"],
   "dictionaries": [

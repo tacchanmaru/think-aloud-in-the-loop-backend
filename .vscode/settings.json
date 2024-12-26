@@ -34,5 +34,18 @@
   ],
   "python.defaultInterpreterPath": ".venv/bin/python",
   "python.languageServer": "Pylance",
-  "cSpell.diagnosticLevel": "Warning"
+  "cSpell.diagnosticLevel": "Warning",
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/.venv": true,
+    "**/__pycache__": true,
+    "**/.ruff_cache": true,
+    "**/.pytest_cache": true,
+    "**/.webassets-cache": true
+  }
 }
