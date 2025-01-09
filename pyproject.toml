@@ -74,6 +74,8 @@ extraPaths = [
     "${workspaceFolder}",
     ".venv/lib/python3.*/site-packages",
 ]
+venvPath = "."
+venv = ".venv"
 importFormat = "absolute"
 typeCheckingMode = "basic"
 reportUnnecessaryTypeIgnoreComment = "warning"
