@@ -61,8 +61,8 @@ max-args = 8
 [tool.uv]
 dev-dependencies = [
     "pre-commit>=4.0.1",
-    "pyright>=1.1.390",
-    "ruff>=0.8.2",
+    "pyright>=1.1.391",
+    "ruff>=0.8.6",
 ]
 managed = true
 
