@@ -33,6 +33,7 @@ def configure_logger(logger: logging.Logger) -> None:
     file_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
     logger.addHandler(file_handler)
+    logger.setLevel(LOG_LEVEL)
     logging.info("log file is %s", log_file)
     logging.info("log level is %s", LOG_LEVEL)
     logging.info("timezone is %s", TIMEZONE)
