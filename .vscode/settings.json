@@ -33,6 +33,7 @@
     ".venv/lib/python3.*/site-packages"
   ],
   "python.defaultInterpreterPath": ".venv/bin/python",
+  "python.terminal.activateEnvironment": true,
   "python.languageServer": "Pylance",
   "cSpell.diagnosticLevel": "Warning",
   "files.exclude": {
