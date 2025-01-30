@@ -1,13 +1,7 @@
 version: "3"
 
 tasks:
-  install:
-    cmds:
-      - brew install uv
-      - brew install visual-studio-code
-      - task: install-extension
-
-  install-extension:
+  install-extensions:
     vars:
       EXTENSIONS:
         sh: jq -r '.recommendations[]' .vscode/extensions.json
@@ -16,23 +10,21 @@ tasks:
           var: EXTENSIONS
           as: EXT
         cmd: code --install-extension {{.EXT}}
+
   init:
     cmds:
+      - task: install-extensions
       - uv sync
       - uvx pre-commit install
 
   update:
     cmds:
-      - brew update
-      - brew upgrade uv
       - uv sync -U
       - uvx pre-commit autoupdate
-      - brew upgrade visual-studio-code
       - code --update-extensions
 
   create-init:
     internal: true
-
     status:
       - test -f {{.DIRECTORY}}/__init__.py
     cmds:
@@ -51,6 +43,7 @@ tasks:
         task: create-init
         vars:
           DIRECTORY: "{{.DIR}}"
+
   mkdir:
     cmds:
       - mkdir -p {{.DIR}}

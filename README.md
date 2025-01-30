@@ -4,16 +4,18 @@ Describe your project here.
 
 ## Installation
 
-### Taskfile
+### mise-en-place
 
-```bash
-brew install go-task
-task install
+```zsh
+brew install mise
+echo 'eval "$(mise activate zsh)"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
 ## Setup
 
-```bash
+```zsh
+mise trust
 task init
 ```
 
