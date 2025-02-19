@@ -6,16 +6,13 @@ Describe your project here.
 
 ### mise-en-place
 
-```zsh
-brew install mise
-echo 'eval "$(mise activate zsh)"' >> ~/.zshrc
-source ~/.zshrc
-```
+<https://mise.jdx.dev/getting-started.html>
 
 ## Setup
 
 ```zsh
 mise trust
+mise i
 task init
 ```
 
