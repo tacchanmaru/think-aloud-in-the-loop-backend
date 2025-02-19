@@ -3,18 +3,17 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [project]
-authors = [
-    # cSpell:disable
-    { name = "Kohei Kumazawa", email = "48900989+dfc22@users.noreply.github.com" },
-    { name = "Hodaka Ueda", email = "35979840+hodhodhod@users.noreply.github.com" },
-    # cSpell:enable
-]
-dependencies = [
-    "python-dotenv>=1.0.1",
-]
-description = "Add your description here"
+# authors = [
+#     # cSpell:disable
+#     { name = "Kohei Kumazawa", email = "48900989+dfc22@users.noreply.github.com" },
+#     { name = "Hodaka Ueda", email = "35979840+hodhodhod@users.noreply.github.com" },
+#     # cSpell:enable
+# ]
+classifiers = ["Private :: Do Not Upload"]
+dependencies = []
+# description = "Add your description here"
 name = "python-scaffold"
-readme = "README.md"
+# readme = "README.md"
 requires-python = ">= 3.12"
 version = "0.1.0"
 
@@ -26,10 +25,6 @@ allow-direct-references = true
 
 [tool.ruff]
 line-length = 100
-
-
-logger-objects = ["src.lib.logger.LOGGER"]
-
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -47,16 +42,11 @@ unfixable = [
     "F841", # unused variable
 ]
 
-logger-objects = ["src.library.logger.LOGGER"]
-
-
 [tool.ruff.lint.pycodestyle]
 max-line-length = 102
 
-
 [tool.ruff.lint.pylint]
 max-args = 8
-
 
 [tool.uv]
 dev-dependencies = [
