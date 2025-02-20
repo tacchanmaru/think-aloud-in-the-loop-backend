@@ -35,6 +35,7 @@
   "python.defaultInterpreterPath": ".venv/bin/python",
   "python.terminal.activateEnvironment": true,
   "python.languageServer": "Pylance",
+  "python.envFile": "${workspaceFolder}/.env",
   "cSpell.diagnosticLevel": "Warning",
   "files.exclude": {
     "**/.git": true,
