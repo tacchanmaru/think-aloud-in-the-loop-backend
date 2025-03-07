@@ -18,7 +18,7 @@ requires-python = ">= 3.12"
 version = "0.1.0"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["src/python_scaffold"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -49,11 +49,6 @@ max-line-length = 102
 max-args = 8
 
 [tool.uv]
-dev-dependencies = [
-    "pre-commit>=4.0.1",
-    "pyright>=1.1.391",
-    "ruff>=0.8.6",
-]
 managed = true
 
 [tool.pyright]
@@ -71,3 +66,10 @@ typeCheckingMode = "basic"
 reportUnnecessaryTypeIgnoreComment = "warning"
 enableTypeIgnoreComments = false
 deprecateTypingAliases = true
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.1.0",
+    "pyright>=1.1.396",
+    "ruff>=0.9.9",
+]
