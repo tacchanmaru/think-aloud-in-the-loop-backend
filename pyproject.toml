@@ -13,7 +13,6 @@ classifiers = ["Private :: Do Not Upload"]
 dependencies = []
 # description = "Add your description here"
 name = "python-scaffold"
-# readme = "README.md"
 requires-python = ">= 3.12"
 version = "0.1.0"
 
@@ -53,12 +52,9 @@ managed = true
 
 [tool.pyright]
 ignore = [".venv/lib/python3.*/site-packages"]
-include = ["src"]
+include = ["src", "tests"]
 exclude = ["typings"]
-extraPaths = [
-    "${workspaceFolder}",
-    ".venv/lib/python3.*/site-packages",
-]
+extraPaths = ["src", ".venv/lib/python3.*/site-packages"]
 venvPath = "."
 venv = ".venv"
 importFormat = "absolute"
