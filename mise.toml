@@ -1,4 +1,10 @@
 [tools]
+"cargo:taplo-cli" = "latest"
+node = "latest"
+"npm:cspell-cli" = "latest"
+"npm:markdownlint-cli2" = "latest"
+"npm:prettier" = "latest"
+rust = "latest"
 task = "latest"
 uv = "latest"
 
