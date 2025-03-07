@@ -1,18 +1,7 @@
 {
-  "words": [
-    "charliermarsh",
-    "esbenp",
-    "htmlcov",
-    "ipynb",
-    "nohup",
-    "pylance",
-    "pypirc",
-    "tamasfe",
-    "taplo",
-    "webassets"
-  ],
+  "words": ["htmlcov", "ipynb", "nohup", "pypirc", "taplo", "webassets"],
   "enableFiletypes": ["python", "markdown", "yaml", "toml", "json", "jsonc"],
-  "ignorePaths": ["typings", "uv.lock"],
+  "ignorePaths": ["typings", "uv.lock", ".vscode"],
   "dictionaries": [
     "cpp",
     "softwareTerms",
