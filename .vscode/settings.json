@@ -37,6 +37,7 @@
   "python.languageServer": "Pylance",
   "python.envFile": "${workspaceFolder}/.env",
   "cSpell.diagnosticLevel": "Warning",
+  "files.insertFinalNewline": true,
   "files.exclude": {
     "**/.git": true,
     "**/.svn": true,
