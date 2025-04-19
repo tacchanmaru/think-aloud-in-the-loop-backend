@@ -16,10 +16,31 @@
             color: #666;
             font-style: italic;
         }
+        .input-area {
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            margin-bottom: 10px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="input-area">
+        <h2>テキストを入力</h2>
+        <textarea id="input-text" placeholder="分析したいテキストを入力してください"></textarea>
+        <div class="button-group">
+            <button onclick="submitText()">次へ</button>
+        </div>
+    </div>
+
+    <div class="container" id="main-content" style="display: none;">
         <div class="box">
             <h2>元のテキスト</h2>
             <div id="original"></div>
@@ -33,10 +54,43 @@
         </div>
     </div>
 
-    <button onclick="startRecording()">録音開始</button>
+    <button onclick="startRecording()" id="record-button" style="display: none;">録音開始</button>
 
     <script>
         let ws;
+
+        async function submitText() {
+            const text = document.getElementById('input-text').value;
+            if (!text.trim()) {
+                alert('テキストを入力してください');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8000/api/display-text', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text }),
+                });
+
+                if (response.ok) {
+                    // 入力エリアを非表示にし、メインコンテンツを表示
+                    document.querySelector('.input-area').style.display = 'none';
+                    document.getElementById('main-content').style.display = 'flex';
+                    document.getElementById('record-button').style.display = 'block';
+                    
+                    // 元のテキストを表示
+                    document.getElementById('original').textContent = text;
+                } else {
+                    alert('エラーが発生しました');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('エラーが発生しました');
+            }
+        }
 
         async function startRecording() {
             // WebSocketの接続
@@ -64,13 +118,6 @@
                 console.error('マイクの使用許可が得られませんでした:', err);
             }
         }
-
-        // 初期表示用
-        fetch('http://localhost:8000/api/display-text')
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('original').textContent = data.text;
-            });
     </script>
 </body>
 </html>
