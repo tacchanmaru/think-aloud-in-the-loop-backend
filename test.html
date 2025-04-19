@@ -99,11 +99,10 @@
             ws.onmessage = function(event) {
                 const data = JSON.parse(event.data);
                 
-                if (data.type === 'delta') {
-                    // 音声認識の途中経過を表示
-                    document.getElementById('transcription').textContent = data.text;
-                } else if (data.type === 'completed') {
+
+                if (data.type === 'completed') {
                     // 完了時の処理
+                    console.log(data);
                     document.getElementById('modified').textContent = data.modified_text;
                     document.getElementById('edit-plan').textContent = data.edit_plan;
                     document.getElementById('transcription').textContent = '';
