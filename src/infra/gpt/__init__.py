@@ -1,0 +1,45 @@
+import asyncio
+import base64
+import json
+
+import numpy as np
+
+import sounddevice as sd
+
+
+class AudioStreamer:
+    def __init__(self, samplerate: int, blocksize: int, channels: int) -> None:
+        self.samplerate = samplerate
+        self.blocksize = blocksize
+        self.channels = channels
+        self.websocket = None
+        self.event_loop = None
+
+    def start(self, websocket, event_loop) -> sd.InputStream:
+        self.websocket = websocket
+        self.event_loop = event_loop
+
+        return sd.InputStream(
+            samplerate=self.samplerate,
+            channels=self.channels,
+            blocksize=self.blocksize,
+            dtype="float32",
+            callback=self._callback,
+        )
+
+    def _callback(self, indata, _frames, _time_info, status):
+        if status:
+            print("[SoundDevice Status]", status)
+
+        pcm_data = (indata * 32767).astype(np.int16).tobytes()
+        base64_audio = base64.b64encode(pcm_data).decode("utf-8")
+
+        audio_event = {
+            "type": "input_audio_buffer.append",
+            "audio": base64_audio,
+        }
+
+        asyncio.run_coroutine_threadsafe(
+            self.websocket.send(json.dumps(audio_event)),
+            self.event_loop,
+        )

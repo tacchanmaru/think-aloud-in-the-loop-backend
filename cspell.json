@@ -1,7 +1,25 @@
 {
-  "words": ["ipynb", "nohup", "pypirc", "taplo", "webassets"],
-  "enableFiletypes": ["python", "markdown", "yaml", "toml", "json", "jsonc"],
-  "ignorePaths": ["typings", "uv.lock", ".vscode"],
+  "words": [
+    "ipynb",
+    "nohup",
+    "pypirc",
+    "samplerate",
+    "taplo",
+    "webassets"
+  ],
+  "enableFiletypes": [
+    "python",
+    "markdown",
+    "yaml",
+    "toml",
+    "json",
+    "jsonc"
+  ],
+  "ignorePaths": [
+    "typings",
+    "uv.lock",
+    ".vscode"
+  ],
   "dictionaries": [
     "cpp",
     "softwareTerms",
