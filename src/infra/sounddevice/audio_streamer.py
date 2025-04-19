@@ -27,7 +27,7 @@ class AudioStreamer:
             callback=self._callback,
         )
 
-    def _callback(self, indata, _frames, _time_info, status):
+    def _callback(self, indata, _frames, _time_info, status) -> None:
         if status:
             print("[SoundDevice Status]", status)
 

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Think Aloud Test</title>
+    <style>
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .box {
+            flex: 1;
+            padding: 20px;
+            border: 1px solid #ccc;
+        }
+        #transcription {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="box">
+            <h2>元のテキスト</h2>
+            <div id="original"></div>
+        </div>
+        <div class="box">
+            <h2>修正後のテキスト</h2>
+            <div id="modified"></div>
+            <h3>修正方針</h3>
+            <div id="edit-plan"></div>
+            <div id="transcription"></div>
+        </div>
+    </div>
+
+    <button onclick="startRecording()">録音開始</button>
+
+    <script>
+        let ws;
+
+        async function startRecording() {
+            // WebSocketの接続
+            ws = new WebSocket('ws://localhost:8000/ws');
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'delta') {
+                    // 音声認識の途中経過を表示
+                    document.getElementById('transcription').textContent = data.text;
+                } else if (data.type === 'completed') {
+                    // 完了時の処理
+                    document.getElementById('modified').textContent = data.modified_text;
+                    document.getElementById('edit-plan').textContent = data.edit_plan;
+                    document.getElementById('transcription').textContent = '';
+                }
+            };
+
+            // マイクの使用許可を求める
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // ここでストリームを処理する（必要に応じて）
+            } catch (err) {
+                console.error('マイクの使用許可が得られませんでした:', err);
+            }
+        }
+
+        // 初期表示用
+        fetch('http://localhost:8000/api/display-text')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('original').textContent = data.text;
+            });
+    </script>
+</body>
+</html>

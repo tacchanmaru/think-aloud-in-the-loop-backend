@@ -85,9 +85,9 @@ class ModifyText:
         ]
         return self.client(messages)
 
-    def __call__(self, text: str, utterance: str) -> str:
+    def __call__(self, text: str, utterance: str) -> tuple[str, str]:
         if not self._should_edit(text, utterance):
-            return text
+            return text, ""
         edit_plan = self._plan_edit(text, utterance)
-        print(f"📝 修正方針: {edit_plan}")
-        return self._apply_edit(text, edit_plan)
+        modified = self._apply_edit(text, edit_plan)
+        return modified, edit_plan

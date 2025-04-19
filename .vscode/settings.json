@@ -50,5 +50,9 @@
     "**/.ruff_cache": true,
     "**/.pytest_cache": true,
     "**/.webassets-cache": true
-  }
+  },
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}",
+    ".venv/lib/python3.*/site-packages"
+  ]
 }

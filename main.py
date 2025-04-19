@@ -1,14 +1,30 @@
 import asyncio
 
+from fastapi import FastAPI, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.websockets import WebSocketDisconnect
+
 from src.infra.gpt.modify_text import ModifyText
 from src.infra.sounddevice.audio_streamer import AudioStreamer
 from src.infra.ws_transcriber.ws_transcriber import TranscriptionClient
 from src.lib.env import ENV
+from src.lib.logger import LOGGER
+
+app = FastAPI()
+
+# CORSの設定
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 本番環境では適切なオリジンを指定してください
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 SAMPLING_RATE = 24000
 BLOCK_SIZE = 2048
 CHANNELS = 1
-API_KEY = ENV.get("OPENAI_API_KEY")  # あなたのAPIキー
+API_KEY = ENV.get("OPENAI_API_KEY")
 
 # 画面上に表示されている仮のテキスト（固定でも可、将来的には更新可能）
 DISPLAY_TEXT = """
@@ -37,10 +53,18 @@ DISPLAY_TEXT = """
 """
 
 
-async def main():
+@app.get("/api/display-text")
+async def get_display_text():
+    return {"text": DISPLAY_TEXT}
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+
     transcriber = TranscriptionClient(api_key=API_KEY)
-    websocket = await transcriber.connect()
-    await transcriber.initialize_session(websocket)
+    openai_ws = await transcriber.connect()
+    await transcriber.initialize_session(openai_ws)
 
     loop = asyncio.get_running_loop()
 
@@ -50,39 +74,50 @@ async def main():
         channels=CHANNELS,
     )
 
-    modifier = ModifyText()  # ← 修正ユースケースを初期化
+    modifier = ModifyText()
 
-    # transcription を受け取りながら text を修正して表示
     async def receive_and_modify():
         buffer = ""
         i = 0
         while True:
-            response = await websocket.recv()
+            response = await openai_ws.recv()
             data = await transcriber.parse_response(response)
 
-            # delta で発話途中の文字をバッファに貯める
             if data["type"] == "delta":
                 buffer += data["text"]
 
-            # completed で1ターンの発話が完了したら、text修正
             elif data["type"] == "completed":
                 utterance = data["text"]
-                print(f"\n🗣️ 発話内容: {utterance}")
                 if i == 0:
-                    modified = modifier(DISPLAY_TEXT, utterance)
+                    modified, edit_plan = modifier(DISPLAY_TEXT, utterance)
                 else:
-                    modified = modifier(modified, utterance)
+                    modified, edit_plan = modifier(modified, utterance)
                 i += 1
-                print(f"📝 修正後のテキスト:\n{modified}\n")
+
+                # 完了時の結果をフロントエンドに送信
+                LOGGER.info(f"utterance: {utterance}")
+                LOGGER.info(f"edit_plan: {edit_plan}")
+                LOGGER.info(f"modified: {modified}")
+                await websocket.send_json(
+                    {
+                        "type": "completed",
+                        "utterance": utterance,
+                        "edit_plan": edit_plan,
+                        "modified_text": modified,
+                    },
+                )
                 buffer = ""
 
-    with streamer.start(websocket, loop):
-        print("🎙️ リアルタイム文字起こしを開始します（Ctrl+Cで停止）")
+    with streamer.start(openai_ws, loop):
         try:
             await receive_and_modify()
-        except KeyboardInterrupt:
-            print("🔚 終了します。")
+        except WebSocketDisconnect:
+            print("WebSocket接続が切断されました")
+        except Exception as e:
+            print(f"エラーが発生しました: {e}")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)
