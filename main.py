@@ -1,6 +1,5 @@
 import asyncio
 from dataclasses import dataclass
-from typing import List, Optional
 
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -94,7 +93,6 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             if not text_state:  # 型チェックのため再確認
                 return
 
-            accumulated_utterance = ""
             while True:
                 try:
                     LOGGER.debug("Waiting for audio data...")
@@ -106,11 +104,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
                     elif data["type"] == "completed":
                         utterance = data["text"]
-                        if accumulated_utterance:
-                            utterance = f"{accumulated_utterance} {utterance}"
-                            accumulated_utterance = ""
-
-                        LOGGER.info(f"Combined transcription: {utterance}")
+                        LOGGER.info(f"Transcription completed: {utterance}")
                         LOGGER.info("Applying text modification...")
                         modified, edit_plan = modifier(
                             text_state.current_text,
@@ -119,7 +113,6 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
                         if modified == text_state.current_text:  # should_editがFalseの場合
                             LOGGER.info("No changes needed, continuing...")
-                            accumulated_utterance = utterance
                             continue
 
                         # 履歴を更新
