@@ -10,7 +10,11 @@ from src.infra.sounddevice.audio_streamer import AudioStreamer
 from src.infra.ws_transcriber.ws_transcriber import TranscriptionClient
 from src.lib.env import ENV
 from src.lib.logger import LOGGER
-from src.usecase.text_modification import TextModificationUseCase
+from src.usecase.text_modification import (
+    TextModificationHistory,
+    TextModificationUseCase,
+    TextState,
+)
 
 app = FastAPI()
 
@@ -29,17 +33,6 @@ CHANNELS = 1
 API_KEY = ENV.get("OPENAI_API_KEY")
 
 
-@dataclass
-class TextState:
-    original_text: str
-    current_text: str
-    history: list[dict]  # {"utterance": str, "edit_plan": str, "modified_text": str}
-
-
-# グローバルな状態管理
-text_state: TextState | None = None
-
-
 class TextUpdate(BaseModel):
     text: str
 
@@ -51,6 +44,7 @@ async def update_display_text(text_update: TextUpdate) -> dict:
         original_text=text_update.text,
         current_text=text_update.text,
         history=[],
+        history_summary="",
     )
     return {"status": "success"}
 
@@ -111,6 +105,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         result = text_modification_usecase.judge_and_plan(
                             text_state.current_text,
                             utterance,
+                            text_state.history,
                         )
 
                         if not result.should_edit:  # should_editがFalseの場合
@@ -123,12 +118,14 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
                         # 修正計画をフロントエンドに送信
                         LOGGER.info(f"Edit plan: {result.edit_plan}")
+                        LOGGER.info(f"Current constraints:\n{text_state.history_summary}")
                         await websocket.send_json(
                             {
                                 "type": "edit_plan",
                                 "utterance": utterance,
                                 "edit_plan": result.edit_plan,
                                 "original_text": text_state.original_text,
+                                "history_summary": text_state.history_summary,
                             },
                         )
                         LOGGER.info("Edit plan sent to frontend")
@@ -142,13 +139,19 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
                         # 履歴を更新
                         text_state.history.append(
-                            {
-                                "utterance": utterance,
-                                "edit_plan": result.edit_plan,
-                                "modified_text": modified_text,
-                            },
+                            TextModificationHistory(
+                                utterance=utterance,
+                                edit_plan=result.edit_plan,
+                                modified_text=modified_text,
+                            ),
                         )
                         text_state.current_text = modified_text
+
+                        # history_summaryを更新
+                        text_state.history_summary = text_modification_usecase.history_summarizer(
+                            text_state.history,
+                        )
+                        LOGGER.info(f"Updated constraints:\n{text_state.history_summary}")
 
                         # 修正結果をフロントエンドに送信
                         LOGGER.info(f"Modified text: {modified_text}")
@@ -158,7 +161,15 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                                 "utterance": utterance,
                                 "modified_text": modified_text,
                                 "original_text": text_state.original_text,
-                                "history": text_state.history,
+                                "history": [
+                                    {
+                                        "utterance": h.utterance,
+                                        "edit_plan": h.edit_plan,
+                                        "modified_text": h.modified_text,
+                                    }
+                                    for h in text_state.history
+                                ],
+                                "history_summary": text_state.history_summary,
                             },
                         )
                         LOGGER.info("Modification results sent to frontend")
