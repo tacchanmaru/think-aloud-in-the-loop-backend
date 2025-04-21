@@ -6,11 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.websockets import WebSocketDisconnect
 
-from src.infra.gpt.modify_text import ModifyText
 from src.infra.sounddevice.audio_streamer import AudioStreamer
 from src.infra.ws_transcriber.ws_transcriber import TranscriptionClient
 from src.lib.env import ENV
 from src.lib.logger import LOGGER
+from src.usecase.text_modification import TextModificationUseCase
 
 app = FastAPI()
 
@@ -87,7 +87,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         )
         LOGGER.info("Audio streamer started")
 
-        modifier = ModifyText()
+        text_modification_usecase = TextModificationUseCase()
 
         async def receive_and_modify() -> None:
             if not text_state:  # 型チェックのため再確認
@@ -105,41 +105,63 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                     elif data["type"] == "completed":
                         utterance = data["text"]
                         LOGGER.info(f"Transcription completed: {utterance}")
-                        LOGGER.info("Applying text modification...")
-                        modified, edit_plan = modifier(
+                        LOGGER.info("Judging and planning text modification...")
+
+                        # まず判定と修正計画の生成を行う
+                        result = text_modification_usecase.judge_and_plan(
                             text_state.current_text,
                             utterance,
                         )
 
-                        if modified == text_state.current_text:  # should_editがFalseの場合
+                        if not result.should_edit:  # should_editがFalseの場合
                             LOGGER.info("No changes needed, continuing...")
                             continue
+
+                        if not result.edit_plan:  # edit_planがNoneの場合
+                            LOGGER.warning("No edit plan generated, continuing...")
+                            continue
+
+                        # 修正計画をフロントエンドに送信
+                        LOGGER.info(f"Edit plan: {result.edit_plan}")
+                        await websocket.send_json(
+                            {
+                                "type": "edit_plan",
+                                "utterance": utterance,
+                                "edit_plan": result.edit_plan,
+                                "original_text": text_state.original_text,
+                            },
+                        )
+                        LOGGER.info("Edit plan sent to frontend")
+
+                        # 修正を適用
+                        LOGGER.info("Applying modification...")
+                        modified_text = text_modification_usecase.apply_modification(
+                            text_state.current_text,
+                            result.edit_plan,
+                        )
 
                         # 履歴を更新
                         text_state.history.append(
                             {
                                 "utterance": utterance,
-                                "edit_plan": edit_plan,
-                                "modified_text": modified,
+                                "edit_plan": result.edit_plan,
+                                "modified_text": modified_text,
                             },
                         )
-                        text_state.current_text = modified
+                        text_state.current_text = modified_text
 
-                        # 完了時の結果をフロントエンドに送信
-                        LOGGER.info("Sending results to frontend...")
-                        LOGGER.info(f"Edit plan: {edit_plan}")
-                        LOGGER.info(f"Modified text: {modified}")
+                        # 修正結果をフロントエンドに送信
+                        LOGGER.info(f"Modified text: {modified_text}")
                         await websocket.send_json(
                             {
-                                "type": "completed",
+                                "type": "modification_complete",
                                 "utterance": utterance,
-                                "edit_plan": edit_plan,
-                                "modified_text": modified,
+                                "modified_text": modified_text,
                                 "original_text": text_state.original_text,
                                 "history": text_state.history,
                             },
                         )
-                        LOGGER.info("Results sent to frontend")
+                        LOGGER.info("Modification results sent to frontend")
 
                 except Exception as e:
                     LOGGER.error(f"Error in receive_and_modify: {e}")
@@ -158,9 +180,12 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         # Cleanup resources
         try:
             LOGGER.info("Cleaning up resources...")
-            if openai_ws:
+            if streamer:
+                streamer.stop()
+            if openai_ws and not openai_ws.closed:
                 await openai_ws.close()
-            await websocket.close()
+            if not websocket.client_state.disconnected:
+                await websocket.close()
             LOGGER.info("Cleanup completed successfully")
         except Exception as e:
             LOGGER.error(f"Error during cleanup: {e}")
