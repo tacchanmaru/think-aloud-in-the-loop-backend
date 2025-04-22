@@ -1,7 +1,8 @@
 import asyncio
+import base64
 from dataclasses import dataclass
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, File, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.websockets import WebSocketDisconnect
@@ -10,6 +11,7 @@ from src.infra.sounddevice.audio_streamer import AudioStreamer
 from src.infra.ws_transcriber.ws_transcriber import TranscriptionClient
 from src.lib.env import ENV
 from src.lib.logger import LOGGER
+from src.usecase.generate_product_description import ProductDescriptionGenerator
 from src.usecase.text_modification import (
     TextModificationHistory,
     TextModificationUseCase,
@@ -200,6 +202,50 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             LOGGER.info("Cleanup completed successfully")
         except Exception as e:
             LOGGER.error(f"Error during cleanup: {e}")
+
+
+@app.post("/api/generate-description")
+async def generate_description(file: UploadFile = File(...)) -> dict:
+    """画像から商品説明文を生成するエンドポイント
+
+    Args:
+        file (UploadFile): アップロードされた画像ファイル
+
+    Returns:
+        dict: 生成された商品説明文とエラー情報（存在する場合）を含む辞書
+
+    """
+    try:
+        LOGGER.info("Starting product description generation...")
+
+        # 画像データをBase64エンコード
+        contents = await file.read()
+        base64_image = base64.b64encode(contents).decode()
+
+        # 商品説明文を生成
+        generator = ProductDescriptionGenerator()
+        result = generator(base64_image)
+
+        if result.error_message:
+            LOGGER.error(f"Error generating description: {result.error_message}")
+            return {
+                "success": False,
+                "error": result.error_message,
+            }
+
+        LOGGER.info("Product description generated successfully")
+        return {
+            "success": True,
+            "description": result.description,
+        }
+
+    except Exception as e:
+        error_message = f"Error processing image: {e!s}"
+        LOGGER.error(error_message)
+        return {
+            "success": False,
+            "error": error_message,
+        }
 
 
 if __name__ == "__main__":
