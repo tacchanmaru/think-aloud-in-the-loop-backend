@@ -40,7 +40,6 @@ class TranscriptionClient:
         data = json.loads(raw)
         if data.get("type") == "conversation.item.input_audio_transcription.delta":
             return {"type": "delta", "text": data.get("delta", "")}
-        elif data.get("type") == "conversation.item.input_audio_transcription.completed":
+        if data.get("type") == "conversation.item.input_audio_transcription.completed":
             return {"type": "completed", "text": data.get("transcript", "")}
-        else:
-            return {"type": "unknown", "text": ""}
+        return {"type": "unknown", "text": ""}
