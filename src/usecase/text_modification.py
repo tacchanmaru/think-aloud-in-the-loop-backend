@@ -176,7 +176,7 @@ class TextModifier:
     def __init__(self) -> None:
         self.client = GptResponse()
 
-    def __call__(self, text: str, edit_plan: str) -> str:
+    def __call__(self, text: str, edit_plan: str, image_base64: str | None = None) -> str:
         messages = [
             {
                 "role": "system",
@@ -192,6 +192,7 @@ class TextModifier:
                         2. 商品の魅力が伝わる表現を心がける
                         3. 簡潔かつ明確な文章を作成する
                         4. メルカリの商品説明として適切な丁寧さを保つ
+                        5. 画像が提供されている場合は、画像の内容と説明文の整合性を確認する
                         
                         修正した文章のみを返してください。説明や理由は含めないでください。
                         """,
@@ -203,7 +204,19 @@ class TextModifier:
                 "content": [
                     {"type": "text", "text": f"修正方針: {edit_plan}"},
                     {"type": "text", "text": f"元のテキスト: {text}"},
-                ],
+                ]
+                + (
+                    [
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_base64}",
+                            },
+                        },
+                    ]
+                    if image_base64
+                    else []
+                ),
             },
         ]
         return self.client(messages)
@@ -234,6 +247,6 @@ class TextModificationUseCase:
         edit_plan = self.plan_generator(text, utterance, history_summary)
         return TextModificationResult(should_edit=True, edit_plan=edit_plan)
 
-    def apply_modification(self, text: str, edit_plan: str) -> str:
+    def apply_modification(self, text: str, edit_plan: str, image_base64: str | None = None) -> str:
         """修正計画に基づいてテキストを修正します。"""
-        return self.modifier(text, edit_plan)
+        return self.modifier(text, edit_plan, image_base64)

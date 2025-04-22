@@ -1,7 +1,7 @@
 import asyncio
 import base64
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from fastapi import FastAPI, File, Form, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,23 +37,27 @@ API_KEY = ENV.get("OPENAI_API_KEY")
 
 # グローバルな状態管理
 text_states: dict[str, TextState] = {}
+image_data: dict[str, str] = {}  # 新しい辞書を追加して画像データを保存
 
 
 class TextUpdate(BaseModel):
     text: str
     user_id: str
+    image_base64: str | None = None
 
 
 @app.post("/api/display-text")
 async def update_display_text(text_update: TextUpdate) -> dict:
     try:
-        global text_states
+        global text_states, image_data
         text_states[text_update.user_id] = TextState(
             original_text=text_update.text,
             current_text=text_update.text,
             history=[],
             history_summary="",
         )
+        if text_update.image_base64:
+            image_data[text_update.user_id] = text_update.image_base64
         LOGGER.info(f"Updating display text for user: {text_update.user_id}")
         return {"status": "success"}
     except Exception as e:
@@ -165,6 +169,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         modified_text = text_modification_usecase.apply_modification(
                             text_state.current_text,
                             result.edit_plan,
+                            image_data.get(user_id),  # 画像データを渡す
                         )
 
                         # 履歴を更新

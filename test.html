@@ -253,6 +253,7 @@
                     body: JSON.stringify({ 
                         text: text,
                         user_id: userId,
+                        image_base64: imagePreview.src ? imagePreview.src.split(',')[1] : null,
                     }),
                 });
 
