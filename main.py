@@ -1,8 +1,9 @@
 import asyncio
 import base64
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Dict, List
 
-from fastapi import FastAPI, File, UploadFile, WebSocket
+from fastapi import FastAPI, File, Form, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.websockets import WebSocketDisconnect
@@ -34,21 +35,33 @@ BLOCK_SIZE = 2048
 CHANNELS = 1
 API_KEY = ENV.get("OPENAI_API_KEY")
 
+# グローバルな状態管理
+text_states: dict[str, TextState] = {}
+
 
 class TextUpdate(BaseModel):
     text: str
+    user_id: str
 
 
 @app.post("/api/display-text")
 async def update_display_text(text_update: TextUpdate) -> dict:
-    global text_state
-    text_state = TextState(
-        original_text=text_update.text,
-        current_text=text_update.text,
-        history=[],
-        history_summary="",
-    )
-    return {"status": "success"}
+    try:
+        global text_states
+        text_states[text_update.user_id] = TextState(
+            original_text=text_update.text,
+            current_text=text_update.text,
+            history=[],
+            history_summary="",
+        )
+        LOGGER.info(f"Updating display text for user: {text_update.user_id}")
+        return {"status": "success"}
+    except Exception as e:
+        LOGGER.error(f"Error updating display text: {e!s}")
+        return {
+            "status": "error",
+            "message": str(e),
+        }
 
 
 @app.websocket("/ws")
@@ -56,18 +69,29 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
     LOGGER.info("New WebSocket connection accepted")
 
-    global text_state
-    if not text_state:
-        LOGGER.warning("No text has been set, closing connection")
+    # Get user_id from query parameters
+    user_id = websocket.query_params.get("user_id")
+    if not user_id:
+        LOGGER.warning("No user_id provided, closing connection")
+        await websocket.close(code=1000, reason="No user_id provided")
+        return
+
+    LOGGER.info(f"WebSocket connection established for user: {user_id}")
+
+    global text_states
+    if user_id not in text_states:
+        LOGGER.warning(f"No text has been set for user {user_id}, closing connection")
         await websocket.close(code=1000, reason="No text has been set")
         return
+
+    text_state = text_states[user_id]
 
     transcriber = None
     openai_ws = None
     streamer = None
 
     try:
-        LOGGER.info("Initializing transcription client...")
+        LOGGER.info(f"Initializing transcription client for user {user_id}...")
         transcriber = TranscriptionClient(api_key=API_KEY)
         openai_ws = await transcriber.connect()
         await transcriber.initialize_session(openai_ws)
@@ -91,7 +115,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
             while True:
                 try:
-                    LOGGER.debug("Waiting for audio data...")
+                    LOGGER.debug(f"Waiting for audio data from user {user_id}...")
                     response = await openai_ws.recv()
                     data = await transcriber.parse_response(str(response))
 
@@ -100,7 +124,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
                     elif data["type"] == "completed":
                         utterance = data["text"]
-                        LOGGER.info(f"Transcription completed: {utterance}")
+                        LOGGER.info(f"Transcription completed for user {user_id}: {utterance}")
                         LOGGER.info("Judging and planning text modification...")
 
                         # まず判定と修正計画の生成を行う
@@ -111,16 +135,20 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         )
 
                         if not result.should_edit:  # should_editがFalseの場合
-                            LOGGER.info("No changes needed, continuing...")
+                            LOGGER.info(f"No changes needed for user {user_id}, continuing...")
                             continue
 
                         if not result.edit_plan:  # edit_planがNoneの場合
-                            LOGGER.warning("No edit plan generated, continuing...")
+                            LOGGER.warning(
+                                f"No edit plan generated for user {user_id}, continuing...",
+                            )
                             continue
 
                         # 修正計画をフロントエンドに送信
-                        LOGGER.info(f"Edit plan: {result.edit_plan}")
-                        LOGGER.info(f"Current constraints:\n{text_state.history_summary}")
+                        LOGGER.info(f"Edit plan for user {user_id}: {result.edit_plan}")
+                        LOGGER.info(
+                            f"Current constraints for user {user_id}:\n{text_state.history_summary}",
+                        )
                         await websocket.send_json(
                             {
                                 "type": "edit_plan",
@@ -130,10 +158,10 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                                 "history_summary": text_state.history_summary,
                             },
                         )
-                        LOGGER.info("Edit plan sent to frontend")
+                        LOGGER.info(f"Edit plan sent to frontend for user {user_id}")
 
                         # 修正を適用
-                        LOGGER.info("Applying modification...")
+                        LOGGER.info(f"Applying modification for user {user_id}...")
                         modified_text = text_modification_usecase.apply_modification(
                             text_state.current_text,
                             result.edit_plan,
@@ -153,10 +181,12 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         text_state.history_summary = text_modification_usecase.history_summarizer(
                             text_state.history,
                         )
-                        LOGGER.info(f"Updated constraints:\n{text_state.history_summary}")
+                        LOGGER.info(
+                            f"Updated constraints for user {user_id}:\n{text_state.history_summary}",
+                        )
 
                         # 修正結果をフロントエンドに送信
-                        LOGGER.info(f"Modified text: {modified_text}")
+                        LOGGER.info(f"Modified text for user {user_id}: {modified_text}")
                         await websocket.send_json(
                             {
                                 "type": "modification_complete",
@@ -174,49 +204,53 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                                 "history_summary": text_state.history_summary,
                             },
                         )
-                        LOGGER.info("Modification results sent to frontend")
+                        LOGGER.info(f"Modification results sent to frontend for user {user_id}")
 
                 except Exception as e:
-                    LOGGER.error(f"Error in receive_and_modify: {e}")
+                    LOGGER.error(f"Error in receive_and_modify for user {user_id}: {e}")
                     raise
 
-        LOGGER.info("Starting audio processing...")
+        LOGGER.info(f"Starting audio processing for user {user_id}...")
         with streamer.start(openai_ws, loop):
             await receive_and_modify()
 
     except WebSocketDisconnect:
-        LOGGER.info("WebSocket connection was disconnected by the client")
+        LOGGER.info(f"WebSocket connection was disconnected by the client for user {user_id}")
     except Exception as e:
-        LOGGER.error(f"Error occurred: {e}")
+        LOGGER.error(f"Error occurred for user {user_id}: {e}")
         await websocket.close(code=1011, reason=str(e))
     finally:
         # Cleanup resources
         try:
-            LOGGER.info("Cleaning up resources...")
+            LOGGER.info(f"Cleaning up resources for user {user_id}...")
             if streamer:
                 streamer.stop()
             if openai_ws and not openai_ws.closed:
                 await openai_ws.close()
             if not websocket.client_state.disconnected:
                 await websocket.close()
-            LOGGER.info("Cleanup completed successfully")
+            LOGGER.info(f"Cleanup completed successfully for user {user_id}")
         except Exception as e:
-            LOGGER.error(f"Error during cleanup: {e}")
+            LOGGER.error(f"Error during cleanup for user {user_id}: {e}")
 
 
 @app.post("/api/generate-description")
-async def generate_description(file: UploadFile = File(...)) -> dict:
+async def generate_description(
+    file: UploadFile = File(...),
+    user_id: str = Form(...),
+) -> dict:
     """画像から商品説明文を生成するエンドポイント
 
     Args:
         file (UploadFile): アップロードされた画像ファイル
+        user_id (str): ユーザーID
 
     Returns:
         dict: 生成された商品説明文とエラー情報（存在する場合）を含む辞書
 
     """
     try:
-        LOGGER.info("Starting product description generation...")
+        LOGGER.info(f"Starting product description generation for user: {user_id}")
 
         # 画像データをBase64エンコード
         contents = await file.read()
@@ -227,13 +261,13 @@ async def generate_description(file: UploadFile = File(...)) -> dict:
         result = generator(base64_image)
 
         if result.error_message:
-            LOGGER.error(f"Error generating description: {result.error_message}")
+            LOGGER.error(f"Error generating description for user {user_id}: {result.error_message}")
             return {
                 "success": False,
                 "error": result.error_message,
             }
 
-        LOGGER.info("Product description generated successfully")
+        LOGGER.info(f"Product description generated successfully for user: {user_id}")
         return {
             "success": True,
             "description": result.description,
@@ -241,7 +275,7 @@ async def generate_description(file: UploadFile = File(...)) -> dict:
 
     except Exception as e:
         error_message = f"Error processing image: {e!s}"
-        LOGGER.error(error_message)
+        LOGGER.error(f"Error for user {user_id}: {error_message}")
         return {
             "success": False,
             "error": error_message,

@@ -165,6 +165,9 @@
         const uploadLoading = document.getElementById('uploadLoading');
         const editLoading = document.getElementById('editLoading');
 
+        // Generate a random user ID for testing
+        const userId = 'test-user-' + Math.random().toString(36).substring(2, 15);
+
         // 画像アップロード処理
         imageInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
@@ -182,6 +185,7 @@
             uploadLoading.style.display = 'block';
             const formData = new FormData();
             formData.append('file', file);
+            formData.append('user_id', userId);
 
             try {
                 const response = await fetch('http://localhost:8000/api/generate-description', {
@@ -205,7 +209,7 @@
 
         // WebSocket接続の初期化
         async function initializeWebSocket() {
-            ws = new WebSocket(`ws://localhost:8000/ws`);
+            ws = new WebSocket(`ws://localhost:8000/ws?user_id=${userId}`);
             
             ws.onmessage = function(event) {
                 const data = JSON.parse(event.data);
@@ -246,13 +250,18 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ text: text }),
+                    body: JSON.stringify({ 
+                        text: text,
+                        user_id: userId,
+                    }),
                 });
-                
+
                 if (!response.ok) {
-                    throw new Error('Failed to update display text');
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'テキストの設定に失敗しました');
                 }
 
+                // WebSocket接続を初期化
                 await initializeWebSocket();
             } catch (error) {
                 showError('エラーが発生しました: ' + error);
@@ -266,9 +275,12 @@
         }
 
         // 録音ボタンのクリックハンドラ
-        recordButton.addEventListener('click', () => {
+        recordButton.addEventListener('click', async () => {
             if (!isRecording) {
                 editLoading.style.display = 'block';
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    await initializeWebSocket();
+                }
             }
             isRecording = !isRecording;
             updateRecordButtonState();
