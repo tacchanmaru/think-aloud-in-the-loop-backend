@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from src.infra.gpt.gpt_response import GptResponse
 
@@ -15,7 +14,7 @@ class ProductDescriptionGenerator:
         self.client = GptResponse()
 
     def __call__(self, image_base64: str) -> ProductDescriptionResult:
-        """画像から商品説明文を生成します。
+        """画像から商品説明文を生成します.
 
         Args:
             image_base64 (str): Base64エンコードされた画像データ
@@ -57,17 +56,6 @@ class ProductDescriptionGenerator:
                             - サイズ: 約16cm
 
                             ご覧いただきありがとうございます。
-
-                            [例]
-                            UNIVERSITYロゴが特徴的なグレーのクルーネックスウェット。
-
-                            - 色: グレー
-                            - デザイン: UNIVERSITYロゴ入り
-                            - スタイル: クルーネック
-                            - 素材: コットン混紡
-                            - サイズ: Lサイズ
-
-                            ご覧いただきありがとうございます。
                             """,
                         },
                     ],
@@ -91,7 +79,7 @@ class ProductDescriptionGenerator:
             description = self.client(messages)
             return ProductDescriptionResult(description=description)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return ProductDescriptionResult(
                 description="",
                 error_message=f"商品説明文の生成中にエラーが発生しました: {e!s}",

@@ -1,7 +1,5 @@
 import asyncio
 import base64
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 from fastapi import FastAPI, File, Form, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,8 +12,10 @@ from src.lib.env import ENV
 from src.lib.logger import LOGGER
 from src.usecase.generate_product_description import ProductDescriptionGenerator
 from src.usecase.text_modification import (
-    TextModificationHistory,
     TextModificationUseCase,
+)
+from src.usecase.text_modification_types import (
+    TextModificationHistory,
     TextState,
 )
 

@@ -1,0 +1,49 @@
+from src.infra.gpt.gpt_response import GptResponse
+
+
+class TextModifier:
+    def __init__(self) -> None:
+        self.client = GptResponse()
+
+    def __call__(self, text: str, edit_plan: str, image_base64: str | None = None) -> str:
+        messages = [
+            {
+                "role": "system",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": """
+                        あなたはメルカリの商品説明文を改善するAIアシスタントです。
+                        ユーザーが提供する元の商品説明文と、修正方針に基づいて、商品説明文を修正してください。
+
+                        修正の際には以下のガイドラインに従ってください：
+                        1. 修正方針を忠実に反映する
+                        2. メルカリの商品説明として適切な表現を心がける
+                        3. 画像が提供されている場合は、画像の内容と説明文の整合性を確認する
+
+                        修正した文章のみを返してください。説明や理由は含めないでください。
+                        """,  # noqa: RUF001
+                    },
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": f"修正方針: {edit_plan}"},
+                    {"type": "text", "text": f"元のテキスト: {text}"},
+                ]
+                + (
+                    [
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_base64}",
+                            },
+                        },
+                    ]
+                    if image_base64
+                    else []
+                ),
+            },
+        ]
+        return self.client(messages)
