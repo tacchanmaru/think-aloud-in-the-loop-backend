@@ -1,6 +1,5 @@
 import asyncio
 import base64
-from dataclasses import dataclass
 
 from fastapi import FastAPI, File, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -206,7 +205,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
 @app.post("/api/generate-description")
 async def generate_description(file: UploadFile = File(...)) -> dict:
-    """画像から商品説明文を生成するエンドポイント
+    """画像から商品説明文を生成するエンドポイント.
 
     Args:
         file (UploadFile): アップロードされた画像ファイル

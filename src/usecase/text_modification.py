@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import List, Optional
 
 from src.infra.gpt.gpt_response import GptResponse
 
