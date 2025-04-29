@@ -131,11 +131,12 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         LOGGER.info(f"Transcription completed for user {user_id}: {utterance}")
                         LOGGER.info("Judging and planning text modification...")
 
-                        # まず判定と修正計画の生成を行う
+                        # 判断と計画を生成
+                        LOGGER.info(f"Generating edit plan for user {user_id}...")
                         result = text_modification_usecase.judge_and_plan(
                             text_state.current_text,
                             utterance,
-                            text_state.history,
+                            text_state.history_summary,  # 履歴サマリーを渡す
                         )
 
                         if not result.should_edit:  # should_editがFalseの場合
@@ -182,14 +183,6 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         )
                         text_state.current_text = modified_text
 
-                        # history_summaryを更新
-                        text_state.history_summary = text_modification_usecase.history_summarizer(
-                            text_state.history,
-                        )
-                        LOGGER.info(
-                            f"Updated constraints for user {user_id}:\n{text_state.history_summary}",
-                        )
-
                         # 修正結果をフロントエンドに送信
                         LOGGER.info(f"Modified text for user {user_id}: {modified_text}")
                         await websocket.send_json(
@@ -210,6 +203,16 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                             },
                         )
                         LOGGER.info(f"Modification results sent to frontend for user {user_id}")
+
+                        # history_summaryを更新
+                        text_state.history_summary = (
+                            text_modification_usecase.update_history_summary(
+                                text_state.history,
+                            )
+                        )
+                        LOGGER.info(
+                            f"Updated constraints for user {user_id}:\n{text_state.history_summary}",
+                        )
 
                 except Exception as e:
                     LOGGER.error(f"Error in receive_and_modify for user {user_id}: {e}")
