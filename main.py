@@ -132,7 +132,6 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         LOGGER.info("Judging and planning text modification...")
 
                         # 判断と計画を生成
-                        LOGGER.info(f"Generating edit plan for user {user_id}...")
                         result = text_modification_usecase.judge_and_plan(
                             text_state.current_text,
                             utterance,
