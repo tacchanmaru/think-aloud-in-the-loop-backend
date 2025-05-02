@@ -178,6 +178,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         modified_text = text_modification_usecase.apply_modification(
                             text_state.current_text,
                             result.edit_plan,
+                            text_state.history_summary,  # 履歴サマリーを渡す
                             image_data.get(user_id),  # 画像データを渡す
                         )
 

@@ -36,9 +36,15 @@ class TextModificationUseCase:
             # JSONパースに失敗した場合や必要なキーが存在しない場合は修正不要として扱う
             return TextModificationResult(should_edit=False)
 
-    def apply_modification(self, text: str, edit_plan: str, image_base64: str | None = None) -> str:
+    def apply_modification(
+        self,
+        text: str,
+        edit_plan: str,
+        history_context: str,
+        image_base64: str | None = None,
+    ) -> str:
         """修正計画に基づいてテキストを修正する."""
-        return self.modifier(text, edit_plan, image_base64)
+        return self.modifier(text, edit_plan, history_context, image_base64)
 
     def update_history_summary(self, history: list[TextModificationHistory]) -> str:
         """履歴のサマリーを生成する."""
