@@ -49,6 +49,7 @@ class Logger(logging.getLoggerClass()):
 
     def __new__(cls) -> logging.Logger:
         logger = logging.getLogger(__name__)
+        logger.propagate = False
         if not cls._is_instanced:
             cls._is_instanced = True
             configure_logger(logger)
