@@ -140,6 +140,15 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
                         if not result.should_edit:  # should_editがFalseの場合
                             LOGGER.info(f"No changes needed for user {user_id}, continuing...")
+                            await websocket.send_json(
+                                {
+                                    "type": "no_edit_needed",
+                                    "utterance": utterance,
+                                    "edit_plan": "修正は行いません。",
+                                    "original_text": text_state.original_text,
+                                    "history_summary": text_state.history_summary,
+                                },
+                            )
                             continue
 
                         if not result.edit_plan:  # edit_planがNoneの場合

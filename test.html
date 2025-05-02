@@ -215,7 +215,7 @@
                 const data = JSON.parse(event.data);
                 editLoading.style.display = 'none';
 
-                if (data.type === 'edit_plan') {
+                if (data.type === 'edit_plan' || data.type === 'no_edit_needed') {
                     // 編集計画を受信
                     if (data.history_summary) {
                         constraintsArea.innerHTML = '<h3>現在の制約条件:</h3>' + 
