@@ -1,3 +1,5 @@
+import json
+
 from src.infra.gpt.edit_plan_generator import EditPlanGenerator
 from src.infra.gpt.history_summarizer import HistorySummarizer
 from src.infra.gpt.text_modifier import TextModifier
@@ -21,13 +23,18 @@ class TextModificationUseCase:
     ) -> TextModificationResult:
         """判定と修正計画の生成を行う."""
         result = self.plan_generator(text, utterance, history_summary)
-
-        # 「No」の場合は修正不要
-        if result.strip().lower() == "no":
+        try:
+            parsed_result = json.loads(result)
+            # should_editの値に基づいて結果を返す
+            return TextModificationResult(
+                should_edit=parsed_result["should_edit"] == "yes",
+                edit_plan=parsed_result["content"]
+                if parsed_result["should_edit"] == "yes"
+                else None,
+            )
+        except (json.JSONDecodeError, KeyError):
+            # JSONパースに失敗した場合や必要なキーが存在しない場合は修正不要として扱う
             return TextModificationResult(should_edit=False)
-
-        # それ以外の場合は修正計画として扱う
-        return TextModificationResult(should_edit=True, edit_plan=result)
 
     def apply_modification(self, text: str, edit_plan: str, image_base64: str | None = None) -> str:
         """修正計画に基づいてテキストを修正する."""

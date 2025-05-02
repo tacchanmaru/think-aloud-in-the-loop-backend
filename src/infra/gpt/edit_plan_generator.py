@@ -3,7 +3,7 @@ from src.infra.gpt.gpt_response import GptResponse
 
 class EditPlanGenerator:
     def __init__(self) -> None:
-        self.client = GptResponse(model="gpt-4.1-mini")
+        self.client = GptResponse()
 
     def __call__(self, text: str, utterance: str, history_summary: str = "") -> str:
         history_context = (
@@ -31,8 +31,11 @@ class EditPlanGenerator:
                            - 制約条件が提示されている場合は、それらを考慮してバランスの取れた修正を提案する
 
                         # 出力形式
-                        ・修正が不要な場合は「no」とだけ出力してください。（他の文字を出力すると判定ができません。）
-                        ・修正が必要な場合は「〇〇な修正を行います。」といった具合に修正方針のみを出力してください。（修正された商品説明文の出力ではないです。）
+                        以下のJSONフォーマットで出力してください：
+                        {
+                            "should_edit": "no" または "yes",
+                            "content": should_editが"no"の場合は空文字列、"yes"の場合は修正方針（ユーザーが直感的に確認しやすいようにシンプルに）
+                        }
                         """,  # noqa: E501, RUF001
                     },
                 ],
