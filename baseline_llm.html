@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Description Generator</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .image-upload-section {
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .image-preview {
+            max-width: 300px;
+            margin: 10px auto;
+            display: none;
+        }
+
+        .description-section {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .status.error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .status.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .loading {
+            display: none;
+            margin: 10px 0;
+        }
+
+        .loading::after {
+            content: "⌛";
+            animation: loading 1s infinite;
+        }
+
+        @keyframes loading {
+            0% { content: "⌛"; }
+            50% { content: "⏳"; }
+        }
+
+        #editPrompt {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Product Description Generator</h1>
+        
+        <!-- 画像アップロードセクション -->
+        <div class="image-upload-section">
+            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+            <button onclick="document.getElementById('imageInput').click()">画像を選択</button>
+            <img id="imagePreview" class="image-preview">
+            <div id="uploadLoading" class="loading">画像を処理中...</div>
+        </div>
+
+        <!-- 説明文セクション -->
+        <div class="description-section">
+            <h2>商品説明文</h2>
+            <textarea id="textArea" placeholder="商品説明文がここに表示されます..."></textarea>
+            <input type="text" id="editPrompt" placeholder="編集指示を入力してください...">
+            <button id="editButton">説明文を編集</button>
+            <div id="editLoading" class="loading">編集中...</div>
+        </div>
+    </div>
+
+    <script>
+        const textArea = document.getElementById('textArea');
+        const editPrompt = document.getElementById('editPrompt');
+        const editButton = document.getElementById('editButton');
+        const imageInput = document.getElementById('imageInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const uploadLoading = document.getElementById('uploadLoading');
+        const editLoading = document.getElementById('editLoading');
+
+        // Generate a random user ID for testing
+        const userId = 'test-user-' + Math.random().toString(36).substring(2, 15);
+
+        // 画像アップロード処理
+        imageInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // プレビュー表示
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+
+            // 画像アップロードと説明文生成
+            uploadLoading.style.display = 'block';
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('user_id', userId);
+
+            try {
+                const response = await fetch('http://localhost:8000/api/generate-description', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    textArea.value = result.description;
+                } else {
+                    showError('説明文の生成に失敗しました: ' + result.error);
+                }
+            } catch (error) {
+                showError('エラーが発生しました: ' + error);
+            } finally {
+                uploadLoading.style.display = 'none';
+            }
+        });
+
+        // 編集ボタンのクリックハンドラ
+        editButton.addEventListener('click', async () => {
+            if (!textArea.value) {
+                showError('編集する説明文がありません。');
+                return;
+            }
+
+            if (!editPrompt.value) {
+                showError('編集指示を入力してください。');
+                return;
+            }
+
+            editLoading.style.display = 'block';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/edit-description', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: editPrompt.value,
+                        user_id: userId,
+                        current_text: textArea.value
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    textArea.value = result.edited_description;
+                    showSuccess('説明文を編集しました。');
+                } else {
+                    showError('説明文の編集に失敗しました: ' + result.error);
+                }
+            } catch (error) {
+                showError('エラーが発生しました: ' + error);
+            } finally {
+                editLoading.style.display = 'none';
+            }
+        });
+
+        // エラー表示
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'status error';
+            errorDiv.textContent = message;
+            document.querySelector('.container').appendChild(errorDiv);
+            setTimeout(() => errorDiv.remove(), 5000);
+        }
+
+        // 成功メッセージ表示
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'status success';
+            successDiv.textContent = message;
+            document.querySelector('.container').appendChild(successDiv);
+            setTimeout(() => successDiv.remove(), 3000);
+        }
+    </script>
+</body>
+</html>
