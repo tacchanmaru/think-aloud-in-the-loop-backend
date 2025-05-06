@@ -38,6 +38,7 @@ API_KEY = ENV.get("OPENAI_API_KEY")
 # グローバルな状態管理
 text_states: dict[str, TextState] = {}
 image_data: dict[str, str] = {}  # 新しい辞書を追加して画像データを保存
+processing_flags: dict[str, bool] = {}  # 処理中フラグを管理する辞書を追加
 
 
 class TextUpdate(BaseModel):
@@ -82,13 +83,14 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
     LOGGER.info(f"WebSocket connection established for user: {user_id}")
 
-    global text_states
+    global text_states, processing_flags
     if user_id not in text_states:
         LOGGER.warning(f"No text has been set for user {user_id}, closing connection")
         await websocket.close(code=1000, reason="No text has been set")
         return
 
     text_state = text_states[user_id]
+    processing_flags[user_id] = False  # 初期状態は非処理中
 
     transcriber = None
     openai_ws = None
@@ -127,8 +129,19 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         pass  # 何もしない
 
                     elif data["type"] == "completed":
+                        # 前の処理が完了していない場合は、この発話を捨てる
+                        if processing_flags[user_id]:
+                            LOGGER.info(
+                                f"Skipping utterance for user {user_id} as previous processing is not complete",
+                            )
+                            continue
+
                         utterance = data["text"]
                         LOGGER.info(f"Transcription completed for user {user_id}: {utterance}")
+
+                        # 処理開始フラグを設定
+                        processing_flags[user_id] = True
+
                         LOGGER.info("Judging and planning text modification...")
 
                         # 判断と計画を生成
@@ -149,12 +162,16 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                                     "history_summary": text_state.history_summary,
                                 },
                             )
+                            # 処理完了フラグをリセット
+                            processing_flags[user_id] = False
                             continue
 
                         if not result.edit_plan:  # edit_planがNoneの場合
                             LOGGER.warning(
                                 f"No edit plan generated for user {user_id}, continuing...",
                             )
+                            # 処理完了フラグをリセット
+                            processing_flags[user_id] = False
                             continue
 
                         # 修正計画をフロントエンドに送信
@@ -213,6 +230,9 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         )
                         LOGGER.info(f"Modification results sent to frontend for user {user_id}")
 
+                        # 処理完了フラグをリセット
+                        processing_flags[user_id] = False
+
                         # history_summaryを更新
                         text_state.history_summary = (
                             text_modification_usecase.update_history_summary(
@@ -225,6 +245,8 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
                 except Exception as e:
                     LOGGER.error(f"Error in receive_and_modify for user {user_id}: {e}")
+                    # エラー時にも処理完了フラグをリセット
+                    processing_flags[user_id] = False
                     raise
 
         LOGGER.info(f"Starting audio processing for user {user_id}...")

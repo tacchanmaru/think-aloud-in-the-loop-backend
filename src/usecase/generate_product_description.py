@@ -11,7 +11,7 @@ class ProductDescriptionResult:
 
 class ProductDescriptionGenerator:
     def __init__(self) -> None:
-        self.client = GptResponse()
+        self.client = GptResponse(model="gpt-4.1")
 
     def __call__(self, image_base64: str) -> ProductDescriptionResult:
         """画像から商品説明文を生成します.
@@ -56,6 +56,18 @@ class ProductDescriptionGenerator:
                             - サイズ: 約16cm
 
                             ご覧いただきありがとうございます。
+
+                            [例]
+                            UNIVERSITYロゴが特徴的なグレーのクルーネックスウェット。
+
+                            - 色: グレー
+                            - デザイン: UNIVERSITYロゴ入り
+                            - スタイル: クルーネック
+                            - 素材: コットン混紡
+                            - サイズ: Lサイズ
+
+                            ご覧いただきありがとうございます。
+
                             """,
                         },
                     ],
