@@ -5,7 +5,9 @@ from src.lib.env import ENV
 
 class GptResponse:
     def __init__(
-        self, model: str = "gpt-4.1-nano", api_key: str = ENV.get("OPENAI_API_KEY")
+        self,
+        model: str = "gpt-4.1-mini",
+        api_key: str = ENV.get("OPENAI_API_KEY"),
     ) -> None:
         self.client = OpenAI(api_key=api_key)
         self.model = model
