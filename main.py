@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.websockets import WebSocketDisconnect
 
+from src.infra.gpt.think_aloud_example import ThinkAloudExampleGenerator
 from src.infra.sounddevice.audio_streamer import AudioStreamer
 from src.infra.ws_transcriber.ws_transcriber import TranscriptionClient
 from src.lib.env import ENV
@@ -60,7 +61,27 @@ async def update_display_text(text_update: TextUpdate) -> dict:
         if text_update.image_base64:
             image_data[text_update.user_id] = text_update.image_base64
         LOGGER.info(f"Updating display text for user: {text_update.user_id}")
-        return {"status": "success"}
+
+        # 思考発話の例を生成してフロントエンドに送信
+        try:
+            think_aloud_generator = ThinkAloudExampleGenerator()
+            think_aloud_examples = think_aloud_generator(
+                current_text=text_update.text,
+                image_base64=text_update.image_base64,
+            )
+            LOGGER.info(
+                f"Generated think-aloud examples for user {text_update.user_id}: {think_aloud_examples}",
+            )
+            return {
+                "status": "success",
+                "think_aloud_examples": think_aloud_examples,
+            }
+        except Exception as e:
+            LOGGER.error(f"Error generating think-aloud examples: {e!s}")
+            return {
+                "status": "success",
+                "think_aloud_examples": [],
+            }
     except Exception as e:
         LOGGER.error(f"Error updating display text: {e!s}")
         return {
@@ -242,6 +263,31 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         LOGGER.info(
                             f"Updated constraints for user {user_id}:\n{text_state.history_summary}",
                         )
+
+                        # 思考発話の例を生成してフロントエンドに送信
+                        try:
+                            think_aloud_generator = ThinkAloudExampleGenerator()
+                            think_aloud_examples = think_aloud_generator(
+                                current_text=text_state.current_text,
+                                image_base64=image_data.get(user_id),
+                                original_text=text_state.original_text,
+                                modified_text=modified_text,
+                            )
+                            LOGGER.info(
+                                f"Generated think-aloud examples for user {user_id}: {think_aloud_examples}",
+                            )
+                            await websocket.send_json(
+                                {
+                                    "type": "think-aloud-examples",
+                                    "think_alouds": think_aloud_examples,
+                                },
+                            )
+                            LOGGER.info(f"Think-aloud examples sent to frontend for user {user_id}")
+                        except Exception as e:
+                            LOGGER.error(
+                                f"Error generating think-aloud examples for user {user_id}: {e!s}",
+                            )
+                            # エラーが発生してもメインの処理は続行
 
                 except Exception as e:
                     LOGGER.error(f"Error in receive_and_modify for user {user_id}: {e}")
