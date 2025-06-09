@@ -1,3 +1,5 @@
+from textwrap import dedent
+
 from src.infra.gpt.gpt_response import GptResponse
 
 
@@ -16,7 +18,7 @@ class EditPlanGenerator:
                 "content": [
                     {
                         "type": "text",
-                        "text": """
+                        "text": dedent("""
                         あなたはフリマアプリの商品説明文を改善するAIアシスタントです。
 
                         ユーザーが提供する元の商品説明文と、それに関する感想を含む発話に基づいて、以下の2つの判断を行ってください：
@@ -42,7 +44,7 @@ class EditPlanGenerator:
                             "should_edit": "no" または "yes",
                             "content": should_editが"no"の場合は空文字列、"yes"の場合は修正方針（ユーザーが直感的に確認しやすいようにシンプルに）
                         }
-                        """,  # noqa: E501, RUF001
+                        """),  # noqa: E501, RUF001
                     },
                 ],
             },
