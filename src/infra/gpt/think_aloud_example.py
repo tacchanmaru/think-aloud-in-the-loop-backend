@@ -14,7 +14,7 @@ class ThinkAloudExampleGenerator:
         original_text: str | None = None,
         modified_text: str | None = None,
     ) -> list[str]:
-        """思考発話の例を生成する
+        """思考発話の例を生成する.
 
         Args:
             current_text: 現在の商品説明文
@@ -25,7 +25,7 @@ class ThinkAloudExampleGenerator:
         Returns:
             思考発話の例のリスト（5個程度）
 
-        """
+        """  # noqa: RUF002
         # 修正後かどうかで異なるプロンプトを使用
         if modified_text and original_text:
             # 修正後の場合
@@ -47,7 +47,7 @@ class ThinkAloudExampleGenerator:
 
             必ずJSON形式で返してください。他の文章は一切含めないでください：
             {"examples": ["例1", "例2", "例3", "例4", "例5"]}
-                        """)
+            """)  # noqa: RUF001
 
             user_content: list[dict] = [
                 {"type": "text", "text": f"元の文章: {original_text}"},
@@ -73,7 +73,7 @@ class ThinkAloudExampleGenerator:
 
             必ずJSON形式で返してください。他の文章は一切含めないでください：
             {"examples": ["例1", "例2", "例3", "例4", "例5"]}
-                        """)
+            """)  # noqa: RUF001
 
             user_content: list[dict] = [
                 {"type": "text", "text": f"現在の文章: {current_text}"},
@@ -118,13 +118,14 @@ class ThinkAloudExampleGenerator:
                     return examples[:5]  # 最大5個まで
 
             # JSONが見つからない場合やパースに失敗した場合
-            raise json.JSONDecodeError("No valid JSON found", response, 0)
+            msg = "No valid JSON found"
+            raise json.JSONDecodeError(msg, response, 0)  # noqa: TRY301
 
         except (json.JSONDecodeError, KeyError, AttributeError) as e:
             # パースに失敗した場合はデフォルトの改善点重視の例を返す
             import logging
 
-            logging.warning(f"Failed to parse think-aloud response: {e}, response: {response}")
+            logging.warning(f"Failed to parse think-aloud response: {e}, response: {response}")  # noqa: G004
             return [
                 "もう少し詳しく書きたい",
                 "写真と説明を合わせたい",

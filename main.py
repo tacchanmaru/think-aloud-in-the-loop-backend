@@ -225,6 +225,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                             TextModificationHistory(
                                 utterance=utterance,
                                 edit_plan=result.edit_plan,
+                                original_text=text_state.current_text,
                                 modified_text=modified_text,
                             ),
                         )

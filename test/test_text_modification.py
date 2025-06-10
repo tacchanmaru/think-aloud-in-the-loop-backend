@@ -75,6 +75,7 @@ def main(utterance_sequence: list[str]):
             history = TextModificationHistory(
                 utterance=utterance,
                 edit_plan=result.edit_plan,
+                original_text=text_state.current_text,
                 modified_text=modified_text,
             )
             text_state.history.append(history)
@@ -95,7 +96,8 @@ if __name__ == "__main__":
     utterances = [
         "もう少し詳しく書きたい",
         "もっと魅力的にしたい",
-        "短くまとめたい"
+        "短くまとめたい",
+        "まだ長すぎる",
     ]
 
     main(utterances)

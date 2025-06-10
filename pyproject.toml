@@ -40,6 +40,7 @@ ignore = [
     "D203",  # one blank line before class
     "D213",  # multi-line summary second line
     "PD011", # pandas use of dot values
+    "RUF003", 
 ]
 unfixable = [
     "F401", # unused import
