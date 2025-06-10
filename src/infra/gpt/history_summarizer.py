@@ -1,3 +1,5 @@
+from textwrap import dedent
+
 from src.infra.gpt.gpt_response import GptResponse
 from src.usecase.text_modification_types import TextModificationHistory
 
@@ -16,7 +18,7 @@ class HistorySummarizer:
                 "content": [
                     {
                         "type": "text",
-                        "text": """
+                        "text": dedent("""
                         あなたは、テキスト編集の履歴から、テキストの望ましい状態に関する条件を抽出するAIアシスタントです。
                         与えられた編集履歴を分析し、ユーザーが求めている本質的な条件や制約を箇条書きで整理してください。
 
@@ -31,7 +33,7 @@ class HistorySummarizer:
                         ・〇〇すぎず××すぎない、バランスの取れた表現を使用する
                         ・△△な要素は必ず含める
                         ・□□に関する情報は詳しく記載する
-                        """,  # noqa: RUF001
+                        """),  # noqa: RUF001
                     },
                 ],
             },

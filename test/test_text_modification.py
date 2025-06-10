@@ -50,8 +50,6 @@ def main(utterance_sequence: list[str]):
         logger.info(f"User input {i}: '{utterance}'")
         logger.info("=" * 50)
 
-        logger.info(f"User input: {utterance}")
-
         # 判定と計画
         result = usecase.judge_and_plan(
             text_state.current_text,
@@ -88,16 +86,16 @@ def main(utterance_sequence: list[str]):
 
 if __name__ == "__main__":
     # デフォルトの発話シーケンス
-    default_utterances = [
-        "もう少し詳しく書きたい",
-        "もっと魅力的にしたい",
-    ]
-
-    # 3つの発話を試したい場合は以下をコメントアウト
-    # three_utterances = [
+    # utterances = [
     #     "もう少し詳しく書きたい",
     #     "もっと魅力的にしたい",
-    #     "短くまとめたい"
     # ]
 
-    main(default_utterances)
+    # 3つの発話を試したい場合は以下をコメントアウト
+    utterances = [
+        "もう少し詳しく書きたい",
+        "もっと魅力的にしたい",
+        "短くまとめたい"
+    ]
+
+    main(utterances)

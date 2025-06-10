@@ -73,12 +73,9 @@ class TextModificationUseCase:
                     modification_instructions,
                 )
 
-                # デバッグ用ログ出力
-                self.logger.info("修正指示:\n%s", modification_instructions)
-
                 return result
 
-            except Exception as e:
+            except Exception:
                 if attempt < max_retries:
                     # リトライ時にはより具体的な指示を追加
                     retry_context = f"{history_context}\n\n前回の処理でエラーが発生しました。修正指示は「X行目をYに変更」の形式で出力してください。"
@@ -86,6 +83,7 @@ class TextModificationUseCase:
                     continue
                 # 最終的にエラーが続く場合は元のテキストを返す
                 return text
+        return text  # Ensure we always return a value
 
     def _apply_line_modifications_with_empty_line_preservation(
         self,
@@ -142,7 +140,7 @@ class TextModificationUseCase:
                     new_lines = new_content.split("\n")
                     lines.extend(new_lines)
 
-            elif action == "delete":
+            elif action == "delete":  # noqa: SIM102
                 # 行の削除
                 if 0 <= start_line < len(lines) and 0 <= end_line < len(lines):
                     lines[start_line : end_line + 1] = []
