@@ -42,7 +42,7 @@ class EditPlanGenerator:
                         以下のJSONフォーマットで出力してください：
                         {
                             "should_edit": "no" または "yes",
-                            "content": should_editが"no"の場合は空文字列、"yes"の場合は修正方針（ユーザーが直感的に確認しやすいようにシンプルに）
+                            "content": should_editが"no"の場合は空文字列、"yes"の場合は修正方針（ユーザーが直感的に確認しやすいようになるべく短くシンプルに）
                         }
                         """),  # noqa: E501, RUF001
                     },
