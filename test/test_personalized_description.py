@@ -36,9 +36,10 @@ def main() -> None:
 
     # 商品説明文生成器とスタイル抽出器を初期化
     generator = ProductDescriptionGenerator()
-    
+
     # PersonalStyleExtractorをimport
     from src.infra.gpt.personal_style_extractor import PersonalStyleExtractor
+
     style_extractor = PersonalStyleExtractor()
 
     # 指定されたupdate_history_summary
@@ -85,7 +86,10 @@ def main() -> None:
     print("-" * 40)
     try:
         # 直接infraのProductDescriptionGeneratorを使用してpersonal_styleを渡す
-        from src.infra.gpt.product_description_generator import ProductDescriptionGenerator as InfraGenerator
+        from src.infra.gpt.product_description_generator import (
+            ProductDescriptionGenerator as InfraGenerator,
+        )
+
         infra_generator = InfraGenerator()
         result_with_style = infra_generator(image_base64, personal_description_style)
         print(result_with_style)

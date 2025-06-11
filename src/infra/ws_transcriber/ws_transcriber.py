@@ -15,7 +15,7 @@ class TranscriptionClient:
     async def connect(self):  # noqa: ANN201
         return await websockets.connect(self.ws_url, additional_headers=self.headers)
 
-    async def initialize_session(self, websocket, model: str = "gpt-4o-transcribe") -> None:  # noqa: ANN001
+    async def initialize_session(self, websocket, model: str = "gpt-4o-mini-transcribe") -> None:  # noqa: ANN001
         init_message = {
             "type": "transcription_session.update",
             "session": {
