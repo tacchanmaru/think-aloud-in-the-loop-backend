@@ -271,8 +271,8 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                             think_aloud_examples = think_aloud_generator(
                                 current_text=text_state.current_text,
                                 image_base64=image_data.get(user_id),
-                                original_text=text_state.original_text,
                                 modified_text=modified_text,
+                                edit_plan=result.edit_plan,
                             )
                             LOGGER.info(
                                 f"Generated think-aloud examples for user {user_id}: {think_aloud_examples}",
