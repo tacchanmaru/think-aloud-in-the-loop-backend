@@ -1,7 +1,6 @@
 """個人化された商品説明文生成のテストスクリプト."""
 
 import base64
-import os
 import sys
 from pathlib import Path
 
