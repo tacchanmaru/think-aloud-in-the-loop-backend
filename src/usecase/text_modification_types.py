@@ -5,6 +5,7 @@ from dataclasses import dataclass
 class TextModificationHistory:
     utterance: str
     edit_plan: str
+    original_text: str
     modified_text: str
 
 
