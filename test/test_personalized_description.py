@@ -24,7 +24,7 @@ def main() -> None:
     logger = LOGGER
 
     # テスト画像のパス
-    image_path = project_root / "test" / "pom-pom-purin.jpeg"
+    image_path = project_root / "test" / "goose.jpeg"
     if not image_path.exists():
         logger.error(f"Test image not found: {image_path}")
         return
