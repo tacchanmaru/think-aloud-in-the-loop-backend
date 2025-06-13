@@ -3,6 +3,7 @@ import re
 
 from src.infra.gpt.edit_plan_generator import EditPlanGenerator
 from src.infra.gpt.history_summarizer import HistorySummarizer
+from src.infra.gpt.product_description_validator import ProductDescriptionValidator
 from src.infra.gpt.text_modifier import TextModifier
 from src.lib.logger import LOGGER
 from src.usecase.text_modification_types import (
@@ -16,6 +17,7 @@ class TextModificationUseCase:
         self.plan_generator = EditPlanGenerator(model="gpt-4.1-mini")
         self.modifier = TextModifier()
         self.history_summarizer = HistorySummarizer()
+        self.validator = ProductDescriptionValidator()
         self.logger = LOGGER
 
     def judge_and_plan(
@@ -66,12 +68,31 @@ class TextModificationUseCase:
                     history_context,
                     image_base64,
                 )
-
+                
+                LOGGER.info(f"modification_instructions: {modification_instructions}")
+                
                 # 修正指示をパースして適用
                 result = self._apply_line_modifications_with_empty_line_preservation(
                     text,
                     modification_instructions,
                 )
+
+                LOGGER.info(f"result: {result}")
+                validation_ok = self.validator(result)
+                LOGGER.info(f"validation_result: {validation_ok}")
+
+                # 商品説明文として適切かどうか検証
+                if not validation_ok:
+                    LOGGER.warning(f"Validation failed for attempt {attempt + 1}, result: {result[:100]}...")
+                    if attempt < max_retries:
+                        # 検証に失敗した場合、より詳細な指示でリトライ
+                        retry_context = f"{history_context}\n\n前回の結果が商品説明文として不適切でした。編集指示や技術的な文言を含まず、自然で読みやすい商品説明文になるように修正してください。"
+                        history_context = retry_context
+                        continue
+                    else:
+                        # 最終的に検証に失敗した場合は元のテキストを返す
+                        LOGGER.error("Final validation failed, returning original text")
+                        return text
 
                 return result
 
