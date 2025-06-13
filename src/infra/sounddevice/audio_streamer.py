@@ -45,6 +45,11 @@ class AudioStreamer:
         if not self.websocket or not self.event_loop:
             return
 
+        # WebSocket接続状態を確認
+        if hasattr(self.websocket, 'closed') and self.websocket.closed:
+            print("[AudioStreamer] WebSocket is closed, skipping audio data")
+            return
+
         pcm_data = (indata * 32767).astype(np.int16).tobytes()
         base64_audio = base64.b64encode(pcm_data).decode("utf-8")
 
@@ -53,7 +58,10 @@ class AudioStreamer:
             "audio": base64_audio,
         }
 
-        asyncio.run_coroutine_threadsafe(
-            self.websocket.send(json.dumps(audio_event)),
-            self.event_loop,
-        )
+        try:
+            asyncio.run_coroutine_threadsafe(
+                self.websocket.send(json.dumps(audio_event)),
+                self.event_loop,
+            )
+        except Exception as e:
+            print(f"[AudioStreamer] Error sending audio data: {e}")

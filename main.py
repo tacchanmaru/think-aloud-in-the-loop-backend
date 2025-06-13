@@ -40,6 +40,7 @@ API_KEY = ENV.get("OPENAI_API_KEY")
 text_states: dict[str, TextState] = {}
 image_data: dict[str, str] = {}  # 新しい辞書を追加して画像データを保存
 processing_flags: dict[str, bool] = {}  # 処理中フラグを管理する辞書を追加
+utterances: dict[str, str] = {}  # 蓄積する発話文字列
 
 
 class TextUpdate(BaseModel):
@@ -104,7 +105,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
     LOGGER.info(f"WebSocket connection established for user: {user_id}")
 
-    global text_states, processing_flags
+    global text_states, processing_flags, utterances
     if user_id not in text_states:
         LOGGER.warning(f"No text has been set for user {user_id}, closing connection")
         await websocket.close(code=1000, reason="No text has been set")
@@ -112,6 +113,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
     text_state = text_states[user_id]
     processing_flags[user_id] = False  # 初期状態は非処理中
+    utterances[user_id] = ""  # 発話を初期化
 
     transcriber = None
     openai_ws = None
@@ -140,26 +142,39 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             if not text_state:  # 型チェックのため再確認
                 return
 
+            # 音声処理開始
+            LOGGER.info("Starting to receive audio transcriptions...")
+            await asyncio.sleep(0.1)  # 短い初期化待機
+
             while True:
                 try:
                     LOGGER.debug(f"Waiting for audio data from user {user_id}...")
                     response = await openai_ws.recv()
+                    LOGGER.info(f"Received response from OpenAI: {response}")
                     data = await transcriber.parse_response(str(response))
 
                     if data["type"] == "delta":
                         pass  # 何もしない
 
                     elif data["type"] == "completed":
-                        # 前の処理が完了していない場合は、この発話を捨てる
+                        current_utterance = data["text"]
+                        LOGGER.info(f"Transcription completed for user {user_id}: {current_utterance}")
+                        
+                        # 発話を蓄積
+                        if utterances[user_id]:
+                            utterances[user_id] += " " + current_utterance
+                        else:
+                            utterances[user_id] = current_utterance
+                        
+                        # 前の処理が完了していない場合は、continueして蓄積を続ける
                         if processing_flags[user_id]:
-                            LOGGER.info(
-                                f"Skipping utterance for user {user_id} as previous processing is not complete",
-                            )
+                            LOGGER.info(f"Processing in progress, accumulating utterance for user {user_id}: {utterances[user_id]}")
                             continue
 
-                        utterance = data["text"]
-                        LOGGER.info(f"Transcription completed for user {user_id}: {utterance}")
-
+                        # 蓄積された発話を取得
+                        utterance = utterances[user_id]
+                        utterances[user_id] = ""  # リセット
+                        
                         # 処理開始フラグを設定
                         processing_flags[user_id] = True
 
@@ -265,6 +280,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                             f"Updated constraints for user {user_id}:\n{text_state.history_summary}",
                         )
 
+
                         # 思考発話の例を生成してフロントエンドに送信
                         try:
                             think_aloud_generator = ThinkAloudExampleGenerator()
@@ -311,10 +327,15 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             LOGGER.info(f"Cleaning up resources for user {user_id}...")
             if streamer:
                 streamer.stop()
-            if openai_ws and not openai_ws.closed:
-                await openai_ws.close()
-            if not websocket.client_state.disconnected:
+            if openai_ws:
+                try:
+                    await openai_ws.close()
+                except Exception:
+                    pass
+            try:
                 await websocket.close()
+            except Exception:
+                pass
             LOGGER.info(f"Cleanup completed successfully for user {user_id}")
         except Exception as e:
             LOGGER.error(f"Error during cleanup for user {user_id}: {e}")
@@ -325,7 +346,7 @@ async def generate_description(
     file: UploadFile = File(...),
     user_id: str = Form(...),
 ) -> dict:
-    """画像から商品説明文を生成するエンドポイント
+    """画像から商品説明文を生成するエンドポイント.
 
     Args:
         file (UploadFile): アップロードされた画像ファイル
