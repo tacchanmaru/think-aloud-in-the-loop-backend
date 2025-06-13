@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.websockets import WebSocketDisconnect
 
+from src.infra.gpt.edit_plan_summarizer import EditPlanSummarizer
 from src.infra.gpt.think_aloud_example import ThinkAloudExampleGenerator
 from src.infra.sounddevice.audio_streamer import AudioStreamer
 from src.infra.ws_transcriber.ws_transcriber import TranscriptionClient
@@ -100,12 +101,14 @@ async def process_single_utterance(
             return False
 
         # 修正計画をフロントエンドに送信
-        LOGGER.info(f"Edit plan for user {user_id}: {result.edit_plan}")
+        summarizer = EditPlanSummarizer()
+        edit_plan_for_user = summarizer(result.edit_plan)
+        LOGGER.info(f"Edit plan for user {user_id}: {edit_plan_for_user}")
         await websocket.send_json(
             {
                 "type": "edit_plan",
                 "utterance": utterance,
-                "edit_plan": result.edit_plan,
+                "edit_plan": edit_plan_for_user,
                 "original_text": text_state.original_text,
                 "history_summary": text_state.history_summary,
             },
