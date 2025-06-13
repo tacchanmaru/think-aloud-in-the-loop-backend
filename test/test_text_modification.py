@@ -62,7 +62,7 @@ def main(utterance_sequence: list[str]):
         logger.info(f"Should edit: {result.should_edit}")
         if result.edit_plan:
             logger.info(f"Edit plan: {result.edit_plan}")
-            
+
             # 編集計画の要約を生成してユーザー向けに表示
             plan_summary = summarizer(result.edit_plan)
             logger.info(f"Plan summary for user: {plan_summary}")

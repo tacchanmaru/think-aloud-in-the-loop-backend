@@ -68,11 +68,11 @@ class TextModificationUseCase:
                     history_context,
                     image_base64,
                 )
-                
+
                 LOGGER.info(f"modification_instructions: {modification_instructions}")
-                
-                # 修正指示をパースして適用
-                result = self._apply_line_modifications_with_empty_line_preservation(
+
+                # JSON形式の修正指示をパースして適用
+                result = self._apply_json_modifications(
                     text,
                     modification_instructions,
                 )
@@ -83,10 +83,12 @@ class TextModificationUseCase:
 
                 # 商品説明文として適切かどうか検証
                 if not validation_ok:
-                    LOGGER.warning(f"Validation failed for attempt {attempt + 1}, result: {result[:100]}...")
+                    LOGGER.warning(
+                        f"Validation failed for attempt {attempt + 1}, result: {result[:100]}..."
+                    )
                     if attempt < max_retries:
                         # 検証に失敗した場合、より詳細な指示でリトライ
-                        retry_context = f"{history_context}\n\n前回の結果が商品説明文として不適切でした。編集指示や技術的な文言を含まず、自然で読みやすい商品説明文になるように修正してください。"
+                        retry_context = f"{history_context}\n\n前回の結果が商品説明文として不適切でした。編集指示や技術的な文言を含まず、自然で読みやすい商品説明文になるようにJSON形式で修正してください。"
                         history_context = retry_context
                         continue
                     else:
@@ -99,12 +101,76 @@ class TextModificationUseCase:
             except Exception:
                 if attempt < max_retries:
                     # リトライ時にはより具体的な指示を追加
-                    retry_context = f"{history_context}\n\n前回の処理でエラーが発生しました。修正指示は「X行目をYに変更」の形式で出力してください。"
+                    retry_context = f"{history_context}\n\n前回の処理でエラーが発生しました。必ずJSON形式で出力してください。"
                     history_context = retry_context
                     continue
                 # 最終的にエラーが続く場合は元のテキストを返す
                 return text
         return text  # Ensure we always return a value
+
+    def _apply_json_modifications(
+        self,
+        original_text: str,
+        json_instructions: str,
+    ) -> str:
+        """JSON形式の修正指示を適用する."""
+        try:
+            parsed_instructions = json.loads(json_instructions)
+
+            # should_editがnoの場合は元のテキストをそのまま返す
+            if parsed_instructions.get("should_edit") == "no":
+                return original_text
+
+            # should_editがyesの場合は修正を適用
+            if parsed_instructions.get("should_edit") == "yes":
+                content = parsed_instructions.get("content", [])
+                return self._apply_json_content_modifications(original_text, content)
+
+            # should_editが想定外の値の場合は元のテキストを返す
+            return original_text
+
+        except (json.JSONDecodeError, KeyError) as e:
+            LOGGER.error(f"JSON parsing error: {e}")
+            return original_text
+
+    def _apply_json_content_modifications(
+        self,
+        original_text: str,
+        modifications: list[dict],
+    ) -> str:
+        """JSON形式の修正内容を適用する."""
+        lines = original_text.split("\n")
+
+        # 行番号でソート（後ろから適用するため降順）
+        modifications.sort(key=lambda x: x.get("line", 0), reverse=True)
+
+        for mod in modifications:
+            line_num = mod.get("line", 0)
+            command = mod.get("command", "")
+            text = mod.get("text", "")
+
+            # 1-indexedを0-indexedに変換
+            line_index = line_num - 1
+
+            if command == "modify":
+                # 行の修正
+                if 0 <= line_index < len(lines):
+                    lines[line_index] = text
+
+            elif command == "add":
+                # 行の後に追加
+                if 0 <= line_index < len(lines):
+                    lines.insert(line_index + 1, text)
+                elif line_index == len(lines):
+                    # 最後の行の後に追加
+                    lines.append(text)
+
+            elif command == "delete":
+                # 行の削除
+                if 0 <= line_index < len(lines):
+                    lines.pop(line_index)
+
+        return "\n".join(lines)
 
     def _apply_line_modifications_with_empty_line_preservation(
         self,

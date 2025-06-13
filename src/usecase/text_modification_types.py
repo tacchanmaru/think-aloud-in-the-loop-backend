@@ -1,4 +1,18 @@
 from dataclasses import dataclass
+from typing import Literal
+
+
+@dataclass
+class TextModificationInstruction:
+    line: int
+    command: Literal["add", "delete", "modify"]
+    text: str
+
+
+@dataclass
+class TextModificationJSON:
+    should_edit: Literal["yes", "no"]
+    content: list[TextModificationInstruction]
 
 
 @dataclass

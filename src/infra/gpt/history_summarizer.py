@@ -51,7 +51,10 @@ class HistorySummarizer:
                         "type": "text",
                         "text": "編集履歴:\n"
                         + "\n".join(
-                            [f"- 元文章: {h.original_text}\n  発話: {h.utterance}\n  計画: {h.edit_plan}\n  修正後: {h.modified_text}\n" for h in history],  # noqa: E501
+                            [
+                                f"- 元文章: {h.original_text}\n  発話: {h.utterance}\n  計画: {h.edit_plan}\n  修正後: {h.modified_text}\n"
+                                for h in history
+                            ],  # noqa: E501
                         ),
                     },
                 ],

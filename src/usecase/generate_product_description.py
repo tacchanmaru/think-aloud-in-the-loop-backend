@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 
 from src.infra.gpt.personal_style_extractor import PersonalStyleExtractor
-from src.infra.gpt.product_description_generator import ProductDescriptionGenerator as InfraGenerator
+from src.infra.gpt.product_description_generator import (
+    ProductDescriptionGenerator as InfraGenerator,
+)
 
 
 @dataclass
