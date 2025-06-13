@@ -7,6 +7,7 @@ os.environ["LOG_DIR"] = "test/results"
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from src.infra.gpt.edit_plan_summarizer import EditPlanSummarizer
 from src.lib.logger import Logger
 from src.usecase.text_modification import TextModificationUseCase
 from src.usecase.text_modification_types import TextModificationHistory, TextState
@@ -41,8 +42,9 @@ def main(utterance_sequence: list[str]):
         history_summary="",
     )
 
-    # UseCaseを初期化
+    # UseCaseとSummarizerを初期化
     usecase = TextModificationUseCase()
+    summarizer = EditPlanSummarizer()
 
     # 各発話を順番に処理
     for i, utterance in enumerate(utterance_sequence, 1):
@@ -60,6 +62,10 @@ def main(utterance_sequence: list[str]):
         logger.info(f"Should edit: {result.should_edit}")
         if result.edit_plan:
             logger.info(f"Edit plan: {result.edit_plan}")
+            
+            # 編集計画の要約を生成してユーザー向けに表示
+            plan_summary = summarizer(result.edit_plan)
+            logger.info(f"Plan summary for user: {plan_summary}")
 
             # 修正を適用
             modified_text = usecase.apply_modification(
