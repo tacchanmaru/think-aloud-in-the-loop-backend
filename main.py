@@ -43,6 +43,169 @@ processing_flags: dict[str, bool] = {}  # 処理中フラグを管理する辞�
 utterances: dict[str, str] = {}  # 蓄積する発話文字列
 
 
+async def update_history_summary_async(
+    user_id: str, 
+    text_state: TextState, 
+    text_modification_usecase: TextModificationUseCase
+) -> None:
+    """history_summaryを非同期で更新"""
+    try:
+        LOGGER.info(f"Starting history summary update for user {user_id}")
+        new_summary = text_modification_usecase.update_history_summary(
+            text_state.history,
+        )
+        text_state.history_summary = new_summary
+        LOGGER.info(f"Updated constraints for user {user_id}:\n{text_state.history_summary}")
+    except Exception as e:
+        LOGGER.error(f"Error updating history summary for user {user_id}: {e}")
+
+
+async def process_single_utterance(
+    user_id: str,
+    utterance: str,
+    text_state: TextState,
+    text_modification_usecase: TextModificationUseCase,
+    websocket: WebSocket,
+) -> bool:
+    """単一の発話を処理する共通関数
+    
+    Returns:
+        bool: 修正が実行されたかどうか
+    """
+    try:
+        LOGGER.info(f"Processing utterance for user {user_id}: {utterance}")
+        
+        # 判断と計画を生成
+        result = text_modification_usecase.judge_and_plan(
+            text_state.current_text,
+            utterance,
+            text_state.history_summary,
+        )
+
+        if not result.should_edit:
+            LOGGER.info(f"No changes needed for user {user_id}")
+            await websocket.send_json(
+                {
+                    "type": "no_edit_needed",
+                    "utterance": utterance,
+                    "edit_plan": "修正は行いません。",
+                    "original_text": text_state.original_text,
+                    "history_summary": text_state.history_summary,
+                },
+            )
+            return False
+
+        if not result.edit_plan:
+            LOGGER.warning(f"No edit plan generated for user {user_id}")
+            return False
+
+        # 修正計画をフロントエンドに送信
+        LOGGER.info(f"Edit plan for user {user_id}: {result.edit_plan}")
+        await websocket.send_json(
+            {
+                "type": "edit_plan",
+                "utterance": utterance,
+                "edit_plan": result.edit_plan,
+                "original_text": text_state.original_text,
+                "history_summary": text_state.history_summary,
+            },
+        )
+
+        # 修正を適用
+        LOGGER.info(f"Applying modification for user {user_id}...")
+        modified_text = text_modification_usecase.apply_modification(
+            text_state.current_text,
+            result.edit_plan,
+            text_state.history_summary,
+            image_data.get(user_id),
+        )
+
+        # 履歴を更新
+        text_state.history.append(
+            TextModificationHistory(
+                utterance=utterance,
+                edit_plan=result.edit_plan,
+                original_text=text_state.current_text,
+                modified_text=modified_text,
+            ),
+        )
+        text_state.current_text = modified_text
+
+        # 修正結果をフロントエンドに送信
+        await websocket.send_json(
+            {
+                "type": "modification_complete",
+                "utterance": utterance,
+                "modified_text": modified_text,
+                "original_text": text_state.original_text,
+                "history": [
+                    {
+                        "utterance": h.utterance,
+                        "edit_plan": h.edit_plan,
+                        "modified_text": h.modified_text,
+                    }
+                    for h in text_state.history
+                ],
+                "history_summary": text_state.history_summary,
+            },
+        )
+        LOGGER.info(f"Modification results sent to frontend for user {user_id}")
+        return True
+
+    except Exception as e:
+        LOGGER.error(f"Error processing utterance for user {user_id}: {e}")
+        raise
+
+
+async def check_and_process_buffered_utterances(
+    user_id: str,
+    text_state: TextState,
+    text_modification_usecase: TextModificationUseCase,
+    websocket: WebSocket,
+) -> None:
+    """バッファに溜まった発話があれば即座に処理開始"""
+    global utterances, processing_flags
+    
+    # 処理中の場合は何もしない（同時実行を防ぐ）
+    if processing_flags[user_id]:
+        LOGGER.debug(f"Processing already in progress for user {user_id}, skipping buffer check")
+        return
+    
+    if utterances[user_id]:  # バッファに発話がある場合
+        LOGGER.info(f"Found buffered utterances for user {user_id}: {utterances[user_id]}")
+        
+        # バッファから発話を取得
+        buffered_utterance = utterances[user_id]
+        utterances[user_id] = ""  # バッファをクリア
+        
+        # 新しい処理を開始
+        processing_flags[user_id] = True
+        
+        try:
+            # 共通の処理関数を使用
+            modification_occurred = await process_single_utterance(
+                user_id, buffered_utterance, text_state, text_modification_usecase, websocket
+            )
+            
+            # 処理完了フラグをリセット
+            processing_flags[user_id] = False
+
+            if modification_occurred:
+                # history_summaryを非同期で更新
+                asyncio.create_task(update_history_summary_async(
+                    user_id, text_state, text_modification_usecase
+                ))
+
+            # さらにバッファがあるかチェック（再帰的処理）
+            await check_and_process_buffered_utterances(
+                user_id, text_state, text_modification_usecase, websocket
+            )
+
+        except Exception as e:
+            LOGGER.error(f"Error processing buffered utterances for user {user_id}: {e}")
+            processing_flags[user_id] = False
+
+
 class TextUpdate(BaseModel):
     text: str
     user_id: str
@@ -178,107 +341,32 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         # 処理開始フラグを設定
                         processing_flags[user_id] = True
 
-                        LOGGER.info("Judging and planning text modification...")
-
-                        # 判断と計画を生成
-                        result = text_modification_usecase.judge_and_plan(
-                            text_state.current_text,
-                            utterance,
-                            text_state.history_summary,  # 履歴サマリーを渡す
-                        )
-
-                        if not result.should_edit:  # should_editがFalseの場合
-                            LOGGER.info(f"No changes needed for user {user_id}, continuing...")
-                            await websocket.send_json(
-                                {
-                                    "type": "no_edit_needed",
-                                    "utterance": utterance,
-                                    "edit_plan": "修正は行いません。",
-                                    "original_text": text_state.original_text,
-                                    "history_summary": text_state.history_summary,
-                                },
+                        try:
+                            LOGGER.info("Processing text modification...")
+                            
+                            # 共通の処理関数を使用
+                            modification_occurred = await process_single_utterance(
+                                user_id, utterance, text_state, text_modification_usecase, websocket
                             )
+                            
                             # 処理完了フラグをリセット
                             processing_flags[user_id] = False
-                            continue
 
-                        if not result.edit_plan:  # edit_planがNoneの場合
-                            LOGGER.warning(
-                                f"No edit plan generated for user {user_id}, continuing...",
+                            if modification_occurred:
+                                # history_summaryを非同期で更新（処理をブロックしない）
+                                asyncio.create_task(update_history_summary_async(
+                                    user_id, text_state, text_modification_usecase
+                                ))
+
+                            # バッファに溜まった発話があるかチェックして継続処理
+                            await check_and_process_buffered_utterances(
+                                user_id, text_state, text_modification_usecase, websocket
                             )
-                            # 処理完了フラグをリセット
+                            
+                        except Exception as e:
+                            LOGGER.error(f"Error in text modification processing: {e}")
                             processing_flags[user_id] = False
                             continue
-
-                        # 修正計画をフロントエンドに送信
-                        LOGGER.info(f"Edit plan for user {user_id}: {result.edit_plan}")
-                        LOGGER.info(
-                            f"Current constraints for user {user_id}:\n{text_state.history_summary}",
-                        )
-                        await websocket.send_json(
-                            {
-                                "type": "edit_plan",
-                                "utterance": utterance,
-                                "edit_plan": result.edit_plan,
-                                "original_text": text_state.original_text,
-                                "history_summary": text_state.history_summary,
-                            },
-                        )
-                        LOGGER.info(f"Edit plan sent to frontend for user {user_id}")
-
-                        # 修正を適用
-                        LOGGER.info(f"Applying modification for user {user_id}...")
-                        modified_text = text_modification_usecase.apply_modification(
-                            text_state.current_text,
-                            result.edit_plan,
-                            text_state.history_summary,  # 履歴サマリーを渡す
-                            image_data.get(user_id),  # 画像データを渡す
-                        )
-
-                        # 履歴を更新
-                        text_state.history.append(
-                            TextModificationHistory(
-                                utterance=utterance,
-                                edit_plan=result.edit_plan,
-                                original_text=text_state.current_text,
-                                modified_text=modified_text,
-                            ),
-                        )
-                        text_state.current_text = modified_text
-
-                        # 修正結果をフロントエンドに送信
-                        LOGGER.info(f"Modified text for user {user_id}: {modified_text}")
-                        await websocket.send_json(
-                            {
-                                "type": "modification_complete",
-                                "utterance": utterance,
-                                "modified_text": modified_text,
-                                "original_text": text_state.original_text,
-                                "history": [
-                                    {
-                                        "utterance": h.utterance,
-                                        "edit_plan": h.edit_plan,
-                                        "modified_text": h.modified_text,
-                                    }
-                                    for h in text_state.history
-                                ],
-                                "history_summary": text_state.history_summary,
-                            },
-                        )
-                        LOGGER.info(f"Modification results sent to frontend for user {user_id}")
-
-                        # 処理完了フラグをリセット
-                        processing_flags[user_id] = False
-
-                        # history_summaryを更新
-                        text_state.history_summary = (
-                            text_modification_usecase.update_history_summary(
-                                text_state.history,
-                            )
-                        )
-                        LOGGER.info(
-                            f"Updated constraints for user {user_id}:\n{text_state.history_summary}",
-                        )
 
 
                         # 思考発話の例を生成してフロントエンドに送信
