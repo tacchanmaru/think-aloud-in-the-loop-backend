@@ -153,6 +153,32 @@ async def process_single_utterance(
             },
         )
         LOGGER.info(f"Modification results sent to frontend for user {user_id}")
+
+        # 思考発話の例を生成してフロントエンドに送信
+        try:
+            think_aloud_generator = ThinkAloudExampleGenerator()
+            think_aloud_examples = think_aloud_generator(
+                current_text=text_state.current_text,
+                image_base64=image_data.get(user_id),
+                modified_text=modified_text,
+                edit_plan=result.edit_plan,
+            )
+            LOGGER.info(
+                f"Generated think-aloud examples for user {user_id}: {think_aloud_examples}",
+            )
+            await websocket.send_json(
+                {
+                    "type": "think-aloud-examples",
+                    "think_alouds": think_aloud_examples,
+                },
+            )
+            LOGGER.info(f"Think-aloud examples sent to frontend for user {user_id}")
+        except Exception as e:
+            LOGGER.error(
+                f"Error generating think-aloud examples for user {user_id}: {e!s}",
+            )
+            # エラーが発生してもメインの処理は続行
+
         return True
 
     except Exception as e:
@@ -198,6 +224,7 @@ async def check_and_process_buffered_utterances(
                 asyncio.create_task(update_history_summary_async(
                     user_id, text_state, text_modification_usecase
                 ))
+
 
             # さらにバッファがあるかチェック（再帰的処理）
             await check_and_process_buffered_utterances(
@@ -316,7 +343,6 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                 try:
                     LOGGER.debug(f"Waiting for audio data from user {user_id}...")
                     response = await openai_ws.recv()
-                    LOGGER.info(f"Received response from OpenAI: {response}")
                     data = await transcriber.parse_response(str(response))
 
                     if data["type"] == "delta":
@@ -361,6 +387,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                                     user_id, text_state, text_modification_usecase
                                 ))
 
+
                             # バッファに溜まった発話があるかチェックして継続処理
                             await check_and_process_buffered_utterances(
                                 user_id, text_state, text_modification_usecase, websocket
@@ -372,30 +399,6 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                             continue
 
 
-                        # 思考発話の例を生成してフロントエンドに送信
-                        try:
-                            think_aloud_generator = ThinkAloudExampleGenerator()
-                            think_aloud_examples = think_aloud_generator(
-                                current_text=text_state.current_text,
-                                image_base64=image_data.get(user_id),
-                                modified_text=modified_text,
-                                edit_plan=result.edit_plan,
-                            )
-                            LOGGER.info(
-                                f"Generated think-aloud examples for user {user_id}: {think_aloud_examples}",
-                            )
-                            await websocket.send_json(
-                                {
-                                    "type": "think-aloud-examples",
-                                    "think_alouds": think_aloud_examples,
-                                },
-                            )
-                            LOGGER.info(f"Think-aloud examples sent to frontend for user {user_id}")
-                        except Exception as e:
-                            LOGGER.error(
-                                f"Error generating think-aloud examples for user {user_id}: {e!s}",
-                            )
-                            # エラーが発生してもメインの処理は続行
 
                 except Exception as e:
                     LOGGER.error(f"Error in receive_and_modify for user {user_id}: {e}")
