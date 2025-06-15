@@ -20,7 +20,7 @@ class ProductDescriptionValidator:
                 が含まれてしまっている場合は「no」と回答してください。
 
                 回答は「yes」または「no」のみでお願いします。
-                """),
+                """),  # noqa: E501, RUF001
             },
             {
                 "role": "user",

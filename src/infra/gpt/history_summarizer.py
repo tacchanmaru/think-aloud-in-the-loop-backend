@@ -6,7 +6,7 @@ from src.usecase.text_modification_types import TextModificationHistory
 
 class HistorySummarizer:
     def __init__(self) -> None:
-        self.client = GptResponse()
+        self.client = GptResponse(model="gpt-4.1-mini")
 
     def __call__(self, history: list[TextModificationHistory]) -> str:
         if not history:
