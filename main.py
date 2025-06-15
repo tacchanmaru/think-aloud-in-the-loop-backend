@@ -45,9 +45,9 @@ utterances: dict[str, str] = {}  # 蓄積する発話文字列
 
 
 async def update_history_summary_async(
-    user_id: str, 
-    text_state: TextState, 
-    text_modification_usecase: TextModificationUseCase
+    user_id: str,
+    text_state: TextState,
+    text_modification_usecase: TextModificationUseCase,
 ) -> None:
     """history_summaryを非同期で更新"""
     try:
@@ -69,13 +69,14 @@ async def process_single_utterance(
     websocket: WebSocket,
 ) -> bool:
     """単一の発話を処理する共通関数
-    
+
     Returns:
         bool: 修正が実行されたかどうか
+
     """
     try:
         LOGGER.info(f"Processing utterance for user {user_id}: {utterance}")
-        
+
         # 判断と計画を生成
         result = text_modification_usecase.judge_and_plan(
             text_state.current_text,
@@ -194,41 +195,51 @@ async def check_and_process_buffered_utterances(
 ) -> None:
     """バッファに溜まった発話があれば即座に処理開始"""
     global utterances, processing_flags
-    
+
     # 処理中の場合は何もしない（同時実行を防ぐ）
     if processing_flags[user_id]:
         LOGGER.debug(f"Processing already in progress for user {user_id}, skipping buffer check")
         return
-    
+
     if utterances[user_id]:  # バッファに発話がある場合
         LOGGER.info(f"Found buffered utterances for user {user_id}: {utterances[user_id]}")
-        
+
         # バッファから発話を取得
         buffered_utterance = utterances[user_id]
         utterances[user_id] = ""  # バッファをクリア
-        
+
         # 新しい処理を開始
         processing_flags[user_id] = True
-        
+
         try:
             # 共通の処理関数を使用
             modification_occurred = await process_single_utterance(
-                user_id, buffered_utterance, text_state, text_modification_usecase, websocket
+                user_id,
+                buffered_utterance,
+                text_state,
+                text_modification_usecase,
+                websocket,
             )
-            
+
             # 処理完了フラグをリセット
             processing_flags[user_id] = False
 
             if modification_occurred:
                 # history_summaryを非同期で更新
-                asyncio.create_task(update_history_summary_async(
-                    user_id, text_state, text_modification_usecase
-                ))
-
+                asyncio.create_task(
+                    update_history_summary_async(
+                        user_id,
+                        text_state,
+                        text_modification_usecase,
+                    ),
+                )
 
             # さらにバッファがあるかチェック（再帰的処理）
             await check_and_process_buffered_utterances(
-                user_id, text_state, text_modification_usecase, websocket
+                user_id,
+                text_state,
+                text_modification_usecase,
+                websocket,
             )
 
         except Exception as e:
@@ -350,55 +361,67 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
                     elif data["type"] == "completed":
                         current_utterance = data["text"]
-                        LOGGER.info(f"Transcription completed for user {user_id}: {current_utterance}")
-                        
+                        LOGGER.info(
+                            f"Transcription completed for user {user_id}: {current_utterance}",
+                        )
+
                         # 発話を蓄積
                         if utterances[user_id]:
                             utterances[user_id] += " " + current_utterance
                         else:
                             utterances[user_id] = current_utterance
-                        
+
                         # 前の処理が完了していない場合は、continueして蓄積を続ける
                         if processing_flags[user_id]:
-                            LOGGER.info(f"Processing in progress, accumulating utterance for user {user_id}: {utterances[user_id]}")
+                            LOGGER.info(
+                                f"Processing in progress, accumulating utterance for user {user_id}: {utterances[user_id]}",
+                            )
                             continue
 
                         # 蓄積された発話を取得
                         utterance = utterances[user_id]
                         utterances[user_id] = ""  # リセット
-                        
+
                         # 処理開始フラグを設定
                         processing_flags[user_id] = True
 
                         try:
                             LOGGER.info("Processing text modification...")
-                            
+
                             # 共通の処理関数を使用
                             modification_occurred = await process_single_utterance(
-                                user_id, utterance, text_state, text_modification_usecase, websocket
+                                user_id,
+                                utterance,
+                                text_state,
+                                text_modification_usecase,
+                                websocket,
                             )
-                            
+
                             # 処理完了フラグをリセット
                             processing_flags[user_id] = False
 
                             if modification_occurred:
                                 # history_summaryを非同期で更新（処理をブロックしない）
-                                asyncio.create_task(update_history_summary_async(
-                                    user_id, text_state, text_modification_usecase
-                                ))
-
+                                asyncio.create_task(
+                                    update_history_summary_async(
+                                        user_id,
+                                        text_state,
+                                        text_modification_usecase,
+                                    ),
+                                )
 
                             # バッファに溜まった発話があるかチェックして継続処理
                             await check_and_process_buffered_utterances(
-                                user_id, text_state, text_modification_usecase, websocket
+                                user_id,
+                                text_state,
+                                text_modification_usecase,
+                                websocket,
                             )
-                            
+
                         except Exception as e:
                             LOGGER.error(f"Error in text modification processing: {e}")
                             processing_flags[user_id] = False
                             continue
-
-
 
                 except Exception as e:
                     LOGGER.error(f"Error in receive_and_modify for user {user_id}: {e}")

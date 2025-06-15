@@ -27,12 +27,12 @@ class TranscriptionClient:
             response = await websocket.recv()
             response_data = json.loads(response)
             print(f"Initialization response: {response_data}")
-            
+
             if response_data.get("type") == "error":
                 raise Exception(f"OpenAI API error: {response_data}")
-            elif response_data.get("type") == "transcription_session.created":
+            if response_data.get("type") == "transcription_session.created":
                 print("Transcription session created successfully")
-                
+
                 # 転写を有効にするためのセッション更新
                 update_message = {
                     "type": "transcription_session.update",
@@ -46,12 +46,12 @@ class TranscriptionClient:
                         "input_audio_transcription": {
                             "model": model,
                             "language": "ja",
-                        }
-                    }
+                        },
+                    },
                 }
                 await websocket.send(json.dumps(update_message))
                 print("Sent transcription enable message")
-                
+
         except Exception as e:
             print(f"Error during initialization: {e}")
             raise
