@@ -4,7 +4,7 @@ from src.infra.gpt.gpt_response import GptResponse
 
 
 class ProductDescriptionValidator:
-    def __init__(self, model: str = "gpt-4.1-mini") -> None:
+    def __init__(self, model: str = "gpt-4.1-nano") -> None:
         self.gpt_response = GptResponse(model=model)
 
     def __call__(self, text: str) -> bool:

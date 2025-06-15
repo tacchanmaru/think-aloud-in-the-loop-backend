@@ -4,7 +4,7 @@ from src.infra.gpt.gpt_response import GptResponse
 
 
 class EditPlanGenerator:
-    def __init__(self, model: str = "gpt-4.1") -> None:
+    def __init__(self, model: str = "gpt-4.1-mini") -> None:
         self.client = GptResponse(model=model)
 
     def __call__(self, text: str, utterance: str, history_summary: str = "") -> str:

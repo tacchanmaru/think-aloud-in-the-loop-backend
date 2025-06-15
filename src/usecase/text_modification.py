@@ -14,7 +14,7 @@ from src.usecase.text_modification_types import (
 
 class TextModificationUseCase:
     def __init__(self) -> None:
-        self.plan_generator = EditPlanGenerator(model="gpt-4.1-mini")
+        self.plan_generator = EditPlanGenerator()
         self.modifier = TextModifier()
         self.history_summarizer = HistorySummarizer()
         self.validator = ProductDescriptionValidator()
