@@ -80,6 +80,14 @@ async def process_single_utterance(
     try:
         LOGGER.info(f"Processing utterance for user {user_id}: {utterance}")
 
+        # 処理開始をフロントエンドに通知
+        await websocket.send_json(
+            {
+                "type": "processing_started",
+                "utterance": utterance,
+            }
+        )
+
         # 判断と計画を生成
         result = text_modification_usecase.judge_and_plan(
             text_state.current_text,
@@ -251,7 +259,7 @@ async def check_and_process_buffered_utterances(
     LOGGER.info(f"Processing buffered utterances for user {user_id}: {utterances_to_process}")
 
     # 複数の発話を結合
-    combined_utterance = " ".join(utterances_to_process)
+    combined_utterance = "".join(utterances_to_process)
 
     # 新しい処理を開始
     processing_flags[user_id] = True
@@ -442,6 +450,14 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         current_utterance = data["text"]
                         LOGGER.info(
                             f"Transcription completed for user {user_id}: {current_utterance}",
+                        )
+
+                        # 音声認識結果をフロントエンドに送信
+                        await websocket.send_json(
+                            {
+                                "type": "transcription_completed",
+                                "utterance": current_utterance,
+                            }
                         )
 
                         # 発話をバッファに追加
