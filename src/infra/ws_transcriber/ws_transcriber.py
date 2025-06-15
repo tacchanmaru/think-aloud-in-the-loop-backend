@@ -19,7 +19,7 @@ class TranscriptionClient:
         self,
         websocket,
         model: str = "gpt-4o-mini-transcribe",
-        silence_duration_ms: int = 2000,
+        silence_duration_ms: int = 500,
     ) -> None:
         # 転写専用セッションでは、接続時に自動的にセッションが作成される
         # 初期化レスポンスを待機
