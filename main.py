@@ -221,14 +221,9 @@ def get_utterances_to_process(user_id: str) -> list[str]:
     """処理対象の発話を取得し、バッファから削除"""
     buffer = utterance_buffers.get(user_id, [])
 
-    if len(buffer) >= 3:
-        # 最大3つまで取得
-        utterances_to_process = buffer[:3]
-        utterance_buffers[user_id] = buffer[3:]
-    else:
-        # 全て取得
-        utterances_to_process = buffer.copy()
-        utterance_buffers[user_id] = []
+    # バッファにあるものを全て取得
+    utterances_to_process = buffer.copy()
+    utterance_buffers[user_id] = []
 
     return utterances_to_process
 
