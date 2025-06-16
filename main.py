@@ -8,7 +8,6 @@ from pydantic import BaseModel
 from starlette.websockets import WebSocketDisconnect
 
 from src.infra.gpt.edit_plan_summarizer import EditPlanSummarizer
-from src.infra.gpt.think_aloud_example import ThinkAloudExampleGenerator
 from src.infra.sounddevice.audio_streamer import AudioStreamer
 from src.infra.ws_transcriber.ws_transcriber import TranscriptionClient
 from src.lib.env import ENV
@@ -296,26 +295,7 @@ async def update_display_text(text_update: TextUpdate) -> dict:
             image_data[text_update.user_id] = text_update.image_base64
         LOGGER.info(f"Updating display text for user: {text_update.user_id}")
 
-        # 思考発話の例を生成してフロントエンドに送信
-        try:
-            think_aloud_generator = ThinkAloudExampleGenerator()
-            think_aloud_examples = think_aloud_generator(
-                current_text=text_update.text,
-                image_base64=text_update.image_base64,
-            )
-            LOGGER.info(
-                f"Generated think-aloud examples for user {text_update.user_id}: {think_aloud_examples}",
-            )
-            return {
-                "status": "success",
-                "think_aloud_examples": think_aloud_examples,
-            }
-        except Exception as e:
-            LOGGER.error(f"Error generating think-aloud examples: {e!s}")
-            return {
-                "status": "success",
-                "think_aloud_examples": [],
-            }
+        return {"status": "success"}
     except Exception as e:
         LOGGER.error(f"Error updating display text: {e!s}")
         return {
