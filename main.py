@@ -47,22 +47,6 @@ last_complete_times: dict[str, float] = {}  # 最後の完了時刻を記録
 last_delta_times: dict[str, float] = {}  # 最後のdelta受信時刻を記録
 
 
-async def update_history_summary_async(
-    user_id: str,
-    text_state: TextState,
-    text_modification_usecase: TextModificationUseCase,
-) -> None:
-    """history_summaryを非同期で更新"""
-    try:
-        LOGGER.info(f"Starting history summary update for user {user_id}")
-        new_summary = text_modification_usecase.update_history_summary(
-            text_state.history,
-        )
-        text_state.history_summary = new_summary
-        LOGGER.info(f"Updated constraints for user {user_id}:\n{text_state.history_summary}")
-    except Exception as e:
-        LOGGER.error(f"Error updating history summary for user {user_id}: {e}")
-
 
 async def process_single_utterance(
     user_id: str,
@@ -166,30 +150,16 @@ async def process_single_utterance(
         )
         LOGGER.info(f"Modification results sent to frontend for user {user_id}")
 
-        # 思考発話の例を生成してフロントエンドに送信
+        # history_summaryを更新
         try:
-            think_aloud_generator = ThinkAloudExampleGenerator()
-            think_aloud_examples = think_aloud_generator(
-                current_text=text_state.current_text,
-                image_base64=image_data.get(user_id),
-                modified_text=modified_text,
-                edit_plan=result.edit_plan,
+            LOGGER.info(f"Starting history summary update for user {user_id}")
+            new_summary = text_modification_usecase.update_history_summary(
+                text_state.history,
             )
-            LOGGER.info(
-                f"Generated think-aloud examples for user {user_id}: {think_aloud_examples}",
-            )
-            await websocket.send_json(
-                {
-                    "type": "think-aloud-examples",
-                    "think_alouds": think_aloud_examples,
-                },
-            )
-            LOGGER.info(f"Think-aloud examples sent to frontend for user {user_id}")
+            text_state.history_summary = new_summary
+            LOGGER.info(f"Updated constraints for user {user_id}:\n{text_state.history_summary}")
         except Exception as e:
-            LOGGER.error(
-                f"Error generating think-aloud examples for user {user_id}: {e!s}",
-            )
-            # エラーが発生してもメインの処理は続行
+            LOGGER.error(f"Error updating history summary for user {user_id}: {e}")
 
         return True
 
@@ -261,7 +231,7 @@ async def check_and_process_buffered_utterances(
 
     try:
         # 共通の処理関数を使用
-        modification_occurred = await process_single_utterance(
+        await process_single_utterance(
             user_id,
             combined_utterance,
             text_state,
@@ -269,15 +239,6 @@ async def check_and_process_buffered_utterances(
             websocket,
         )
 
-        if modification_occurred:
-            # history_summaryを非同期で更新
-            asyncio.create_task(
-                update_history_summary_async(
-                    user_id,
-                    text_state,
-                    text_modification_usecase,
-                ),
-            )
 
     except Exception as e:
         LOGGER.error(f"Error processing buffered utterances for user {user_id}: {e}")
@@ -303,7 +264,7 @@ async def periodic_buffer_check(
     """定期的にバッファをチェックして処理するタスク"""
     while True:
         try:
-            await asyncio.sleep(0.5)  # 0.5秒ごとにチェック
+            await asyncio.sleep(0.1)  # 0.1秒ごとにチェック
             await check_and_process_buffered_utterances(
                 user_id,
                 text_state,
