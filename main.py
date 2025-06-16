@@ -72,11 +72,14 @@ async def process_single_utterance(
         )
 
         # 判断と計画を生成
-        result = text_modification_usecase.judge_and_plan(
+        LOGGER.info(f"[{user_id}] Running judge_and_plan in a separate thread...")
+        result = await asyncio.to_thread(
+            text_modification_usecase.judge_and_plan,
             text_state.current_text,
             utterance,
             text_state.history_summary,
         )
+        LOGGER.info(f"[{user_id}] judge_and_plan finished.")
 
         if not result.should_edit:
             LOGGER.info(f"No changes needed for user {user_id}")
@@ -110,13 +113,15 @@ async def process_single_utterance(
         )
 
         # 修正を適用
-        LOGGER.info(f"Applying modification for user {user_id}...")
-        modified_text = text_modification_usecase.apply_modification(
+        LOGGER.info(f"[{user_id}] Running apply_modification in a separate thread...")
+        modified_text = await asyncio.to_thread(
+            text_modification_usecase.apply_modification,
             text_state.current_text,
             result.edit_plan,
             text_state.history_summary,
             image_data.get(user_id),
         )
+        LOGGER.info(f"[{user_id}] apply_modification finished.")
 
         # 履歴を更新
         text_state.history.append(
@@ -151,12 +156,13 @@ async def process_single_utterance(
 
         # history_summaryを更新
         try:
-            LOGGER.info(f"Starting history summary update for user {user_id}")
-            new_summary = text_modification_usecase.update_history_summary(
+            LOGGER.info(f"[{user_id}] Running update_history_summary in a separate thread...")
+            new_summary = await asyncio.to_thread(
+                text_modification_usecase.update_history_summary,
                 text_state.history,
             )
             text_state.history_summary = new_summary
-            LOGGER.info(f"Updated constraints for user {user_id}:\n{text_state.history_summary}")
+            LOGGER.info(f"[{user_id}] Updated constraints: {text_state.history_summary}")
         except Exception as e:
             LOGGER.error(f"Error updating history summary for user {user_id}: {e}")
 
@@ -204,8 +210,6 @@ async def check_and_process_buffered_utterances(
     websocket: WebSocket,
 ) -> None:
     """バッファに溜まった発話があれば処理を開始"""
-    global processing_flags
-
     # 処理中の場合は何もしない（同時実行を防ぐ）
     if processing_flags.get(user_id, False):
         LOGGER.debug(f"Processing already in progress for user {user_id}, skipping buffer check")
@@ -244,14 +248,6 @@ async def check_and_process_buffered_utterances(
     finally:
         # 処理完了フラグをリセット
         processing_flags[user_id] = False
-
-        # 処理完了後に再度バッファをチェック（再帰的処理）
-        await check_and_process_buffered_utterances(
-            user_id,
-            text_state,
-            text_modification_usecase,
-            websocket,
-        )
 
 
 async def periodic_buffer_check(
@@ -404,13 +400,6 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                                 f"Added utterance to buffer for user {user_id}. Buffer size: {len(utterance_buffers[user_id])}",
                             )
 
-                        # バッファをチェックして処理が必要か判定
-                        await check_and_process_buffered_utterances(
-                            user_id,
-                            text_state,
-                            text_modification_usecase,
-                            websocket,
-                        )
 
                 except Exception as e:
                     LOGGER.error(f"Error in receive_and_modify for user {user_id}: {e}")

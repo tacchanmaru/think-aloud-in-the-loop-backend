@@ -18,7 +18,7 @@ class TranscriptionClient:
     async def initialize_session(
         self,
         websocket,
-        model: str = "gpt-4o-mini-transcribe",
+        model: str = "gpt-4o-transcribe",
         silence_duration_ms: int = 500,
     ) -> None:
         # 転写専用セッションでは、接続時に自動的にセッションが作成される
