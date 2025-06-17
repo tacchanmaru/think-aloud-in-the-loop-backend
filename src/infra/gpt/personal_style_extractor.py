@@ -5,7 +5,7 @@ from src.infra.gpt.gpt_response import GptResponse
 
 class PersonalStyleExtractor:
     def __init__(self) -> None:
-        self.client = GptResponse(model="gpt-4.1-mini")
+        self.client = GptResponse(model="gpt-4.1-nano")
 
     def __call__(self, history_summary: str) -> str:
         """履歴サマリーから個人の文章スタイルの好みを抽出する.

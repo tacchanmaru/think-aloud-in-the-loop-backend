@@ -12,6 +12,7 @@ class TextModificationInstruction:
 @dataclass
 class TextModificationJSON:
     should_edit: Literal["yes", "no"]
+    plan: str
     content: list[TextModificationInstruction]
 
 
@@ -35,4 +36,5 @@ class TextState:
 class TextModificationResult:
     should_edit: bool
     edit_plan: str | None = None
+    plan: str | None = None
     modified_text: str | None = None

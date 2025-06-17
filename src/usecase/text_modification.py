@@ -1,6 +1,7 @@
 import json
 import re
 
+from src.infra.gpt.combined_judge_plan_modify import CombinedJudgePlanModify
 from src.infra.gpt.edit_plan_generator import EditPlanGenerator
 from src.infra.gpt.history_summarizer import HistorySummarizer
 from src.infra.gpt.product_description_validator import ProductDescriptionValidator
@@ -16,6 +17,7 @@ class TextModificationUseCase:
     def __init__(self) -> None:
         self.plan_generator = EditPlanGenerator()
         self.modifier = TextModifier()
+        self.combined_judge_plan_modify = CombinedJudgePlanModify()
         self.history_summarizer = HistorySummarizer()
         self.validator = ProductDescriptionValidator()
         self.logger = LOGGER
@@ -34,6 +36,9 @@ class TextModificationUseCase:
             return TextModificationResult(
                 should_edit=parsed_result["should_edit"] == "yes",
                 edit_plan=parsed_result["content"]
+                if parsed_result["should_edit"] == "yes"
+                else None,
+                plan=parsed_result["content"]
                 if parsed_result["should_edit"] == "yes"
                 else None,
             )
@@ -69,7 +74,7 @@ class TextModificationUseCase:
                     image_base64,
                 )
 
-                LOGGER.info(f"modification_instructions: {modification_instructions}")
+                # LOGGER.info(f"modification_instructions: {modification_instructions}")
 
                 # JSON形式の修正指示をパースして適用
                 result = self._apply_json_modifications(
@@ -77,9 +82,9 @@ class TextModificationUseCase:
                     modification_instructions,
                 )
 
-                LOGGER.info(f"result: {result}")
+                # LOGGER.info(f"result: {result}")
                 validation_ok = self.validator(result)
-                LOGGER.info(f"validation_result: {validation_ok}")
+                # LOGGER.info(f"validation_result: {validation_ok}")
 
                 # 商品説明文として適切かどうか検証
                 if not validation_ok:
@@ -107,6 +112,83 @@ class TextModificationUseCase:
                 # 最終的にエラーが続く場合は元のテキストを返す
                 return text
         return text  # Ensure we always return a value
+
+    def judge_and_plan_and_modify(
+        self,
+        text: str,
+        utterance: str,
+        history_summary: str,
+        image_base64: str | None = None,
+    ) -> TextModificationResult:
+        """判定・計画・修正を一つのGPTで実行する."""
+        # リトライ機能付きで処理
+        max_retries = 2
+        for attempt in range(max_retries + 1):
+            try:
+                # 一つのGPTで判定・計画・修正指示を取得
+                modification_instructions = self.combined_judge_plan_modify(
+                    text,
+                    utterance,
+                    history_summary,
+                    image_base64,
+                )
+
+
+                # JSONをパース
+                parsed_result = json.loads(modification_instructions)
+                
+                # should_editの値に基づいて処理を分岐
+                if parsed_result["should_edit"] == "no":
+                    return TextModificationResult(should_edit=False)
+                
+                if parsed_result["should_edit"] == "yes":
+                    # JSON形式の修正指示を適用
+                    modified_text = self._apply_json_modifications(
+                        text,
+                        modification_instructions,
+                    )
+
+                    # LOGGER.info(f"combined_result: {modified_text}")
+                    validation_ok = self.validator(modified_text)
+                    # LOGGER.info(f"combined_validation_result: {validation_ok}")
+
+                    # 商品説明文として適切かどうか検証
+                    if not validation_ok:
+                        LOGGER.warning(
+                            f"Combined validation failed for attempt {attempt + 1}, result: {modified_text[:100]}..."
+                        )
+                        if attempt < max_retries:
+                            # 検証に失敗した場合、より詳細な指示でリトライ
+                            history_summary = f"{history_summary}\n\n前回の結果が商品説明文として不適切でした。編集指示や技術的な文言を含まず、自然で読みやすい商品説明文になるようにJSON形式で修正してください。"
+                            continue
+                        else:
+                            # 最終的に検証に失敗した場合は修正不要として返す
+                            LOGGER.error("Final combined validation failed, returning no edit")
+                            return TextModificationResult(should_edit=False)
+
+                    return TextModificationResult(
+                        should_edit=True,
+                        edit_plan="Combined judge/plan/modify operation", 
+                        plan=parsed_result.get("plan", ""),
+                        modified_text=modified_text,
+                    )
+
+            except (json.JSONDecodeError, KeyError) as e:
+                LOGGER.error(f"Combined JSON parsing error: {e}")
+                if attempt < max_retries:
+                    # リトライ時にはより具体的な指示を追加
+                    history_summary = f"{history_summary}\n\n前回の処理でエラーが発生しました。必ずJSON形式で出力してください。"
+                    continue
+                # 最終的にエラーが続く場合は修正不要として返す
+                return TextModificationResult(should_edit=False)
+            except Exception as e:
+                LOGGER.error(f"Combined processing error: {e}")
+                if attempt < max_retries:
+                    continue
+                # 最終的にエラーが続く場合は修正不要として返す
+                return TextModificationResult(should_edit=False)
+        
+        return TextModificationResult(should_edit=False)
 
     def _apply_json_modifications(
         self,

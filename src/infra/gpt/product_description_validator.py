@@ -30,5 +30,4 @@ class ProductDescriptionValidator:
         ]
 
         response = self.gpt_response(messages)
-        print(f"response: {response}")
         return response.strip().lower() == "yes"
