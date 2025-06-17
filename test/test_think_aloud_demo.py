@@ -125,24 +125,9 @@ def main():
     except Exception as e:
         print(f"エラー: {e}")
 
-    # 4. 画像なしでの動作確認
-    print("\n\n4. 画像なしでの思考発話例生成")
-    print("-" * 40)
-    print("生成された思考発話例:")
-    try:
-        examples = generator(
-            current_text=current_text,
-            modified_text=modified_text,
-            edit_plan=edit_plan,
-        )
-        for i, example in enumerate(examples, 1):
-            print(f"  {i}. {example}")
-    except Exception as e:
-        print(f"エラー: {e}")
-
-    print("\n" + "=" * 80)
+    print("\n" + "=" * 40)
     print("デモ完了")
-    print("=" * 80)
+    print("=" * 40)
 
 
 if __name__ == "__main__":

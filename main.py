@@ -1,12 +1,13 @@
 import asyncio
 import base64
+import time
 
 from fastapi import FastAPI, File, Form, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.websockets import WebSocketDisconnect
 
-from src.infra.gpt.think_aloud_example import ThinkAloudExampleGenerator
+from src.infra.gpt.edit_plan_summarizer import EditPlanSummarizer
 from src.infra.sounddevice.audio_streamer import AudioStreamer
 from src.infra.ws_transcriber.ws_transcriber import TranscriptionClient
 from src.lib.env import ENV
@@ -40,6 +41,234 @@ API_KEY = ENV.get("OPENAI_API_KEY")
 text_states: dict[str, TextState] = {}
 image_data: dict[str, str] = {}  # 新しい辞書を追加して画像データを保存
 processing_flags: dict[str, bool] = {}  # 処理中フラグを管理する辞書を追加
+utterance_buffers: dict[str, list[str]] = {}  # 完了した発話を格納するバッファ
+last_complete_times: dict[str, float] = {}  # 最後の完了時刻を記録
+last_delta_times: dict[str, float] = {}  # 最後のdelta受信時刻を記録
+
+
+
+async def process_single_utterance(
+    user_id: str,
+    utterance: str,
+    text_state: TextState,
+    text_modification_usecase: TextModificationUseCase,
+    websocket: WebSocket,
+) -> bool:
+    """単一の発話を処理する共通関数.
+
+    Returns:
+        bool: 修正が実行されたかどうか
+
+    """
+    try:
+        LOGGER.info(f"Processing utterance for user {user_id}: {utterance}")
+
+        # 処理開始をフロントエンドに通知
+        await websocket.send_json(
+            {
+                "type": "processing_started",
+                "utterance": utterance,
+            }
+        )
+
+        # 判断と計画を生成
+        LOGGER.info(f"[{user_id}] Running judge_and_plan in a separate thread...")
+        result = await asyncio.to_thread(
+            text_modification_usecase.judge_and_plan,
+            text_state.current_text,
+            utterance,
+            text_state.history_summary,
+        )
+        LOGGER.info(f"[{user_id}] judge_and_plan finished.")
+
+        if not result.should_edit:
+            LOGGER.info(f"No changes needed for user {user_id}")
+            await websocket.send_json(
+                {
+                    "type": "no_edit_needed",
+                    "utterance": utterance,
+                    "edit_plan": "修正は行いません。",
+                    "original_text": text_state.original_text,
+                    "history_summary": text_state.history_summary,
+                },
+            )
+            return False
+
+        if not result.edit_plan:
+            LOGGER.warning(f"No edit plan generated for user {user_id}")
+            return False
+
+        # 修正計画をフロントエンドに送信
+        summarizer = EditPlanSummarizer()
+        edit_plan_for_user = summarizer(result.edit_plan)
+        LOGGER.info(f"Edit plan for user {user_id}: {edit_plan_for_user}")
+        await websocket.send_json(
+            {
+                "type": "edit_plan",
+                "utterance": utterance,
+                "edit_plan": edit_plan_for_user,
+                "original_text": text_state.original_text,
+                "history_summary": text_state.history_summary,
+            },
+        )
+
+        # 修正を適用
+        LOGGER.info(f"[{user_id}] Running apply_modification in a separate thread...")
+        modified_text = await asyncio.to_thread(
+            text_modification_usecase.apply_modification,
+            text_state.current_text,
+            result.edit_plan,
+            text_state.history_summary,
+            image_data.get(user_id),
+        )
+        LOGGER.info(f"[{user_id}] apply_modification finished.")
+
+        # 履歴を更新
+        text_state.history.append(
+            TextModificationHistory(
+                utterance=utterance,
+                edit_plan=result.edit_plan,
+                original_text=text_state.current_text,
+                modified_text=modified_text,
+            ),
+        )
+        text_state.current_text = modified_text
+
+        # 修正結果をフロントエンドに送信
+        await websocket.send_json(
+            {
+                "type": "modification_complete",
+                "utterance": utterance,
+                "modified_text": modified_text,
+                "original_text": text_state.original_text,
+                "history": [
+                    {
+                        "utterance": h.utterance,
+                        "edit_plan": h.edit_plan,
+                        "modified_text": h.modified_text,
+                    }
+                    for h in text_state.history
+                ],
+                "history_summary": text_state.history_summary,
+            },
+        )
+        LOGGER.info(f"Modification results sent to frontend for user {user_id}")
+
+        # history_summaryを更新
+        try:
+            LOGGER.info(f"[{user_id}] Running update_history_summary in a separate thread...")
+            new_summary = await asyncio.to_thread(
+                text_modification_usecase.update_history_summary,
+                text_state.history,
+            )
+            text_state.history_summary = new_summary
+            LOGGER.info(f"[{user_id}] Updated constraints: {text_state.history_summary}")
+        except Exception as e:
+            LOGGER.error(f"Error updating history summary for user {user_id}: {e}")
+
+        return True
+
+    except Exception as e:
+        LOGGER.error(f"Error processing utterance for user {user_id}: {e}")
+        raise
+
+
+def should_process_buffer(user_id: str) -> bool:
+    """バッファを処理するべきかどうかを判定"""
+    buffer = utterance_buffers.get(user_id, [])
+
+    # 3つ以上溜まっている場合は処理
+    if len(buffer) >= 3:
+        return True
+
+    # バッファが空の場合は処理しない
+    if not buffer:
+        return False
+
+    # 最後のdeltaから2秒以上経過している場合は処理
+    last_delta_time = last_delta_times.get(user_id, 0)
+    current_time = time.time()
+
+    return current_time - last_delta_time >= 2.0
+
+
+def get_utterances_to_process(user_id: str) -> list[str]:
+    """処理対象の発話を取得し、バッファから削除"""
+    buffer = utterance_buffers.get(user_id, [])
+
+    # バッファにあるものを全て取得
+    utterances_to_process = buffer.copy()
+    utterance_buffers[user_id] = []
+
+    return utterances_to_process
+
+
+async def check_and_process_buffered_utterances(
+    user_id: str,
+    text_state: TextState,
+    text_modification_usecase: TextModificationUseCase,
+    websocket: WebSocket,
+) -> None:
+    """バッファに溜まった発話があれば処理を開始"""
+    # 処理中の場合は何もしない（同時実行を防ぐ）
+    if processing_flags.get(user_id, False):
+        LOGGER.debug(f"Processing already in progress for user {user_id}, skipping buffer check")
+        return
+
+    # 処理条件をチェック
+    if not should_process_buffer(user_id):
+        return
+
+    # 処理対象の発話を取得
+    utterances_to_process = get_utterances_to_process(user_id)
+    if not utterances_to_process:
+        return
+
+    LOGGER.info(f"Processing buffered utterances for user {user_id}: {utterances_to_process}")
+
+    # 複数の発話を結合
+    combined_utterance = "".join(utterances_to_process)
+
+    # 新しい処理を開始
+    processing_flags[user_id] = True
+
+    try:
+        # 共通の処理関数を使用
+        await process_single_utterance(
+            user_id,
+            combined_utterance,
+            text_state,
+            text_modification_usecase,
+            websocket,
+        )
+
+
+    except Exception as e:
+        LOGGER.error(f"Error processing buffered utterances for user {user_id}: {e}")
+    finally:
+        # 処理完了フラグをリセット
+        processing_flags[user_id] = False
+
+
+async def periodic_buffer_check(
+    user_id: str,
+    text_state: TextState,
+    text_modification_usecase: TextModificationUseCase,
+    websocket: WebSocket,
+) -> None:
+    """定期的にバッファをチェックして処理するタスク"""
+    while True:
+        try:
+            await asyncio.sleep(0.1)  # 0.1秒ごとにチェック
+            await check_and_process_buffered_utterances(
+                user_id,
+                text_state,
+                text_modification_usecase,
+                websocket,
+            )
+        except Exception as e:
+            LOGGER.error(f"Error in periodic buffer check for user {user_id}: {e}")
+            break
 
 
 class TextUpdate(BaseModel):
@@ -62,26 +291,7 @@ async def update_display_text(text_update: TextUpdate) -> dict:
             image_data[text_update.user_id] = text_update.image_base64
         LOGGER.info(f"Updating display text for user: {text_update.user_id}")
 
-        # 思考発話の例を生成してフロントエンドに送信
-        try:
-            think_aloud_generator = ThinkAloudExampleGenerator()
-            think_aloud_examples = think_aloud_generator(
-                current_text=text_update.text,
-                image_base64=text_update.image_base64,
-            )
-            LOGGER.info(
-                f"Generated think-aloud examples for user {text_update.user_id}: {think_aloud_examples}",
-            )
-            return {
-                "status": "success",
-                "think_aloud_examples": think_aloud_examples,
-            }
-        except Exception as e:
-            LOGGER.error(f"Error generating think-aloud examples: {e!s}")
-            return {
-                "status": "success",
-                "think_aloud_examples": [],
-            }
+        return {"status": "success"}
     except Exception as e:
         LOGGER.error(f"Error updating display text: {e!s}")
         return {
@@ -104,7 +314,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
     LOGGER.info(f"WebSocket connection established for user: {user_id}")
 
-    global text_states, processing_flags
+    global text_states, processing_flags, utterance_buffers, last_complete_times, last_delta_times
     if user_id not in text_states:
         LOGGER.warning(f"No text has been set for user {user_id}, closing connection")
         await websocket.close(code=1000, reason="No text has been set")
@@ -112,6 +322,9 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
     text_state = text_states[user_id]
     processing_flags[user_id] = False  # 初期状態は非処理中
+    utterance_buffers[user_id] = []  # 発話バッファを初期化
+    last_complete_times[user_id] = time.time()  # 最後の完了時刻を初期化
+    last_delta_times[user_id] = time.time()  # 最後のdelta時刻を初期化
 
     transcriber = None
     openai_ws = None
@@ -136,9 +349,23 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
         text_modification_usecase = TextModificationUseCase()
 
+        # 定期バッファチェックタスクを開始
+        buffer_check_task = asyncio.create_task(
+            periodic_buffer_check(
+                user_id,
+                text_state,
+                text_modification_usecase,
+                websocket,
+            ),
+        )
+
         async def receive_and_modify() -> None:
             if not text_state:  # 型チェックのため再確認
                 return
+
+            # 音声処理開始
+            LOGGER.info("Starting to receive audio transcriptions...")
+            await asyncio.sleep(0.1)  # 短い初期化待機
 
             while True:
                 try:
@@ -147,148 +374,32 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                     data = await transcriber.parse_response(str(response))
 
                     if data["type"] == "delta":
-                        pass  # 何もしない
+                        # delta受信時刻を記録
+                        last_delta_times[user_id] = time.time()
+                        LOGGER.debug(f"Delta received for user {user_id}")
 
                     elif data["type"] == "completed":
-                        # 前の処理が完了していない場合は、この発話を捨てる
-                        if processing_flags[user_id]:
-                            LOGGER.info(
-                                f"Skipping utterance for user {user_id} as previous processing is not complete",
-                            )
-                            continue
-
-                        utterance = data["text"]
-                        LOGGER.info(f"Transcription completed for user {user_id}: {utterance}")
-
-                        # 処理開始フラグを設定
-                        processing_flags[user_id] = True
-
-                        LOGGER.info("Judging and planning text modification...")
-
-                        # 判断と計画を生成
-                        result = text_modification_usecase.judge_and_plan(
-                            text_state.current_text,
-                            utterance,
-                            text_state.history_summary,  # 履歴サマリーを渡す
-                        )
-
-                        if not result.should_edit:  # should_editがFalseの場合
-                            LOGGER.info(f"No changes needed for user {user_id}, continuing...")
-                            await websocket.send_json(
-                                {
-                                    "type": "no_edit_needed",
-                                    "utterance": utterance,
-                                    "edit_plan": "修正は行いません。",
-                                    "original_text": text_state.original_text,
-                                    "history_summary": text_state.history_summary,
-                                },
-                            )
-                            # 処理完了フラグをリセット
-                            processing_flags[user_id] = False
-                            continue
-
-                        if not result.edit_plan:  # edit_planがNoneの場合
-                            LOGGER.warning(
-                                f"No edit plan generated for user {user_id}, continuing...",
-                            )
-                            # 処理完了フラグをリセット
-                            processing_flags[user_id] = False
-                            continue
-
-                        # 修正計画をフロントエンドに送信
-                        LOGGER.info(f"Edit plan for user {user_id}: {result.edit_plan}")
+                        current_utterance = data["text"]
                         LOGGER.info(
-                            f"Current constraints for user {user_id}:\n{text_state.history_summary}",
+                            f"Transcription completed for user {user_id}: {current_utterance}",
                         )
+
+                        # 音声認識結果をフロントエンドに送信
                         await websocket.send_json(
                             {
-                                "type": "edit_plan",
-                                "utterance": utterance,
-                                "edit_plan": result.edit_plan,
-                                "original_text": text_state.original_text,
-                                "history_summary": text_state.history_summary,
-                            },
-                        )
-                        LOGGER.info(f"Edit plan sent to frontend for user {user_id}")
-
-                        # 修正を適用
-                        LOGGER.info(f"Applying modification for user {user_id}...")
-                        modified_text = text_modification_usecase.apply_modification(
-                            text_state.current_text,
-                            result.edit_plan,
-                            text_state.history_summary,  # 履歴サマリーを渡す
-                            image_data.get(user_id),  # 画像データを渡す
+                                "type": "transcription_completed",
+                                "utterance": current_utterance,
+                            }
                         )
 
-                        # 履歴を更新
-                        text_state.history.append(
-                            TextModificationHistory(
-                                utterance=utterance,
-                                edit_plan=result.edit_plan,
-                                original_text=text_state.current_text,
-                                modified_text=modified_text,
-                            ),
-                        )
-                        text_state.current_text = modified_text
-
-                        # 修正結果をフロントエンドに送信
-                        LOGGER.info(f"Modified text for user {user_id}: {modified_text}")
-                        await websocket.send_json(
-                            {
-                                "type": "modification_complete",
-                                "utterance": utterance,
-                                "modified_text": modified_text,
-                                "original_text": text_state.original_text,
-                                "history": [
-                                    {
-                                        "utterance": h.utterance,
-                                        "edit_plan": h.edit_plan,
-                                        "modified_text": h.modified_text,
-                                    }
-                                    for h in text_state.history
-                                ],
-                                "history_summary": text_state.history_summary,
-                            },
-                        )
-                        LOGGER.info(f"Modification results sent to frontend for user {user_id}")
-
-                        # 処理完了フラグをリセット
-                        processing_flags[user_id] = False
-
-                        # history_summaryを更新
-                        text_state.history_summary = (
-                            text_modification_usecase.update_history_summary(
-                                text_state.history,
-                            )
-                        )
-                        LOGGER.info(
-                            f"Updated constraints for user {user_id}:\n{text_state.history_summary}",
-                        )
-
-                        # 思考発話の例を生成してフロントエンドに送信
-                        try:
-                            think_aloud_generator = ThinkAloudExampleGenerator()
-                            think_aloud_examples = think_aloud_generator(
-                                current_text=text_state.current_text,
-                                image_base64=image_data.get(user_id),
-                                modified_text=modified_text,
-                                edit_plan=result.edit_plan,
-                            )
+                        # 発話をバッファに追加
+                        if current_utterance.strip():  # 空文字列でない場合のみ追加
+                            utterance_buffers[user_id].append(current_utterance)
+                            last_complete_times[user_id] = time.time()
                             LOGGER.info(
-                                f"Generated think-aloud examples for user {user_id}: {think_aloud_examples}",
+                                f"Added utterance to buffer for user {user_id}. Buffer size: {len(utterance_buffers[user_id])}",
                             )
-                            await websocket.send_json(
-                                {
-                                    "type": "think-aloud-examples",
-                                    "think_alouds": think_aloud_examples,
-                                },
-                            )
-                            LOGGER.info(f"Think-aloud examples sent to frontend for user {user_id}")
-                        except Exception as e:
-                            LOGGER.error(
-                                f"Error generating think-aloud examples for user {user_id}: {e!s}",
-                            )
-                            # エラーが発生してもメインの処理は続行
+
 
                 except Exception as e:
                     LOGGER.error(f"Error in receive_and_modify for user {user_id}: {e}")
@@ -309,12 +420,24 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         # Cleanup resources
         try:
             LOGGER.info(f"Cleaning up resources for user {user_id}...")
+            # バックグラウンドタスクをキャンセル
+            if "buffer_check_task" in locals():
+                buffer_check_task.cancel()
+                try:
+                    await buffer_check_task
+                except asyncio.CancelledError:
+                    pass
             if streamer:
                 streamer.stop()
-            if openai_ws and not openai_ws.closed:
-                await openai_ws.close()
-            if not websocket.client_state.disconnected:
+            if openai_ws:
+                try:
+                    await openai_ws.close()
+                except Exception:
+                    pass
+            try:
                 await websocket.close()
+            except Exception:
+                pass
             LOGGER.info(f"Cleanup completed successfully for user {user_id}")
         except Exception as e:
             LOGGER.error(f"Error during cleanup for user {user_id}: {e}")
@@ -325,7 +448,7 @@ async def generate_description(
     file: UploadFile = File(...),
     user_id: str = Form(...),
 ) -> dict:
-    """画像から商品説明文を生成するエンドポイント
+    """画像から商品説明文を生成するエンドポイント.
 
     Args:
         file (UploadFile): アップロードされた画像ファイル
