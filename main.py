@@ -93,7 +93,8 @@ async def process_single_utterance(
             return False
 
         modified_text = result.modified_text
-        if not modified_text or not result.plan:
+        plan = result.plan
+        if not modified_text or not plan:
             LOGGER.warning(f"No modified text or plan generated for user {user_id}")
             return False
 
@@ -101,7 +102,7 @@ async def process_single_utterance(
         text_state.history.append(
             TextModificationHistory(
                 utterance=utterance,
-                edit_plan=result.plan,
+                edit_plan=plan,
                 original_text=text_state.current_text,
                 modified_text=modified_text,
             ),
@@ -114,6 +115,7 @@ async def process_single_utterance(
                 "type": "text_modified",
                 "utterance": utterance,
                 "modified_text": modified_text,
+                "plan": plan,
                 "original_text": text_state.original_text,
                 "history": [
                     {
