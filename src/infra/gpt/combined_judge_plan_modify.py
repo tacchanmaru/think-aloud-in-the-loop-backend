@@ -1,0 +1,125 @@
+from textwrap import dedent
+
+from src.infra.gpt.gpt_response import GptResponse
+
+
+class CombinedJudgePlanModify:
+    def __init__(self, model: str = "gpt-4.1-mini") -> None:
+        self.client = GptResponse(model=model)
+
+    def __call__(
+        self,
+        text: str,
+        utterance: str,
+        history_summary: str = "",
+        image_base64: str | None = None,
+    ) -> str:
+        history_context = (
+            f"\n\n現在の編集における制約条件:\n{history_summary}" if history_summary else ""
+        )
+
+        # テキストに行番号を付与（空行はスキップ）
+        lines = text.split("\n")
+        numbered_lines = []
+        for i, line in enumerate(lines):
+            if line.strip():  # 空行でない場合のみ行番号を付与
+                numbered_lines.append(f"{i + 1}: {line}")
+        numbered_text = "\n".join(numbered_lines)
+
+        messages = [
+            {
+                "role": "system",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": dedent("""
+                        あなたはフリマアプリの商品説明文を改善するAIアシスタントです。
+
+                        ユーザーが提供する元の商品説明文と、それに関する感想を含む発話に基づいて、以下の処理を一度に行ってください：
+
+                        ## ステップ1: 修正が必要かの判断
+                        その発話が商品説明文に対するフィードバックを含んでいるかを判断してください。
+                        - 具体的な変更指示だけでなく、「読みづらい」「情報が足りない」などのフィードバックの場合でも、修正を検討します。
+                        - 咳払いや意味のない言葉、関係のない話題など、明らかにフィードバックでないものの場合は、修正は不要です。
+                        - 商品説明文をそのまま読んでいるだけの場合なども想定されますが、その場合は修正は不要です。
+
+                        ## ステップ2: 修正指示の生成（修正が必要な場合のみ）
+                        修正が必要と判断した場合は、以下の方針で具体的な修正指示を生成してください：
+                        - ユーザーから特段指示がない限りは、文章のスタイル（箇条書き、文体など）は基本的に維持する
+                        - 制約条件が提示されている場合は、それらを考慮してバランスの取れた修正を提案する
+                        - 必要最小限の修正のみを行い、変更不要な行には言及しない
+                        - フリマアプリの商品説明として適切な表現を心がける
+                        - 画像の内容と説明文の整合性を確認する
+                        - 一度の変更で文章を長くし過ぎたり、短くしすぎたりすると、ユーザーが読むのが辛くなってしまうので、修正は控えめでお願いします。
+
+                        ## 出力形式
+                        以下のJSON形式で出力してください：
+
+                        {
+                            "should_edit": "no" または "yes",
+                            "plan": "修正方針の説明（ユーザーが直感的に確認しやすいようになるべく短くシンプルに）",
+                            "content": [
+                                {
+                                    "line": 行番号（数値）,
+                                    "command": "add" | "delete" | "modify",
+                                    "text": "追加・変更する内容（deleteの場合は空文字列）"
+                                }
+                            ]
+                        }
+
+                        should_editが"no"の場合はplanは空文字列、contentは空配列にしてください。
+                        should_editが"yes"の場合は修正方針をplanに、修正指示をcontentに配列で含めてください。
+
+                        ## 注意点
+                        - 個人がリユースとして出品する一点物の商品の説明文章です
+                        - 店舗での販売でないので、サイズ展開やカラー展開など、他の商品が存在することを前提とした表現や説明になることはありません
+                        - JSON形式のみを返してください。説明や理由は含めないでください
+                        - 文章として読みやすいようにスタイルに気をつけてください（箇条書きの中に急に文章が入り込んだり、空行が変なところに入り込んだりしないように）
+                        - 重複している項目が無いように注意してください
+
+                        ## 例
+                        入力テキスト:
+                        1: 美品のワンピース
+                        2: サイズM
+                        3: 着用回数少なめ
+
+                        ユーザーの発話: もっと詳しく状態を書きたいな
+
+                        出力例:
+                        {
+                            "should_edit": "yes",
+                            "plan": "商品の使用回数や汚れなどについて詳しく記載します",
+                            "content": [
+                                {
+                                    "line": 3,
+                                    "command": "modify",
+                                    "text": "着用回数3回程度、目立った汚れや傷はありません"
+                                }
+                            ]
+                        }
+                        """),  # noqa: E501, RUF001
+                    },
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": f"元の商品説明文: {numbered_text}"},
+                    {"type": "text", "text": f"ユーザーの発話: {utterance}"},
+                    {"type": "text", "text": f"制約条件: {history_context}"},
+                ]
+                + (
+                    [
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_base64}",
+                            },
+                        },
+                    ]
+                    if image_base64
+                    else []
+                ),
+            },
+        ]
+        return self.client(messages)

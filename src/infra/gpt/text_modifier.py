@@ -5,7 +5,7 @@ from src.infra.gpt.gpt_response import GptResponse
 
 class TextModifier:
     def __init__(self) -> None:
-        self.client = GptResponse(model="gpt-4.1-mini")
+        self.client = GptResponse(model="gpt-4.1-nano")
 
     def __call__(
         self,

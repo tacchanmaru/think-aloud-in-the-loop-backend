@@ -7,7 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.websockets import WebSocketDisconnect
 
-from src.infra.gpt.edit_plan_summarizer import EditPlanSummarizer
 from src.infra.sounddevice.audio_streamer import AudioStreamer
 from src.infra.ws_transcriber.ws_transcriber import TranscriptionClient
 from src.lib.env import ENV
@@ -46,7 +45,6 @@ last_complete_times: dict[str, float] = {}  # 最後の完了時刻を記録
 last_delta_times: dict[str, float] = {}  # 最後のdelta受信時刻を記録
 
 
-
 async def process_single_utterance(
     user_id: str,
     utterance: str,
@@ -68,18 +66,19 @@ async def process_single_utterance(
             {
                 "type": "processing_started",
                 "utterance": utterance,
-            }
+            },
         )
 
-        # 判断と計画を生成
-        LOGGER.info(f"[{user_id}] Running judge_and_plan in a separate thread...")
+        # 判断・計画・修正を一つのステップで実行
+        LOGGER.info(f"[{user_id}] Running judge_and_plan_and_modify in a separate thread...")
         result = await asyncio.to_thread(
-            text_modification_usecase.judge_and_plan,
+            text_modification_usecase.judge_and_plan_and_modify,
             text_state.current_text,
             utterance,
             text_state.history_summary,
+            image_data.get(user_id),
         )
-        LOGGER.info(f"[{user_id}] judge_and_plan finished.")
+        LOGGER.info(f"[{user_id}] judge_and_plan_and_modify finished.")
 
         if not result.should_edit:
             LOGGER.info(f"No changes needed for user {user_id}")
@@ -87,47 +86,23 @@ async def process_single_utterance(
                 {
                     "type": "no_edit_needed",
                     "utterance": utterance,
-                    "edit_plan": "修正は行いません。",
                     "original_text": text_state.original_text,
                     "history_summary": text_state.history_summary,
                 },
             )
             return False
 
-        if not result.edit_plan:
-            LOGGER.warning(f"No edit plan generated for user {user_id}")
+        modified_text = result.modified_text
+        plan = result.plan
+        if not modified_text or not plan:
+            LOGGER.warning(f"No modified text or plan generated for user {user_id}")
             return False
-
-        # 修正計画をフロントエンドに送信
-        summarizer = EditPlanSummarizer()
-        edit_plan_for_user = summarizer(result.edit_plan)
-        LOGGER.info(f"Edit plan for user {user_id}: {edit_plan_for_user}")
-        await websocket.send_json(
-            {
-                "type": "edit_plan",
-                "utterance": utterance,
-                "edit_plan": edit_plan_for_user,
-                "original_text": text_state.original_text,
-                "history_summary": text_state.history_summary,
-            },
-        )
-
-        # 修正を適用
-        LOGGER.info(f"[{user_id}] Running apply_modification in a separate thread...")
-        modified_text = await asyncio.to_thread(
-            text_modification_usecase.apply_modification,
-            text_state.current_text,
-            result.edit_plan,
-            text_state.history_summary,
-            image_data.get(user_id),
-        )
-        LOGGER.info(f"[{user_id}] apply_modification finished.")
 
         # 履歴を更新
         text_state.history.append(
             TextModificationHistory(
                 utterance=utterance,
-                edit_plan=result.edit_plan,
+                edit_plan=plan,
                 original_text=text_state.current_text,
                 modified_text=modified_text,
             ),
@@ -137,9 +112,10 @@ async def process_single_utterance(
         # 修正結果をフロントエンドに送信
         await websocket.send_json(
             {
-                "type": "modification_complete",
+                "type": "text_modified",
                 "utterance": utterance,
                 "modified_text": modified_text,
+                "plan": plan,
                 "original_text": text_state.original_text,
                 "history": [
                     {
@@ -241,7 +217,6 @@ async def check_and_process_buffered_utterances(
             text_modification_usecase,
             websocket,
         )
-
 
     except Exception as e:
         LOGGER.error(f"Error processing buffered utterances for user {user_id}: {e}")
@@ -389,7 +364,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                             {
                                 "type": "transcription_completed",
                                 "utterance": current_utterance,
-                            }
+                            },
                         )
 
                         # 発話をバッファに追加
@@ -399,7 +374,6 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                             LOGGER.info(
                                 f"Added utterance to buffer for user {user_id}. Buffer size: {len(utterance_buffers[user_id])}",
                             )
-
 
                 except Exception as e:
                     LOGGER.error(f"Error in receive_and_modify for user {user_id}: {e}")
