@@ -77,6 +77,7 @@ async def process_single_utterance(
             utterance,
             text_state.history_summary,
             image_data.get(user_id),
+            text_state.history,
         )
         LOGGER.info(f"[{user_id}] judge_and_plan_and_modify finished.")
 
@@ -93,9 +94,9 @@ async def process_single_utterance(
             return False
 
         modified_text = result.modified_text
-        plan = result.plan
+        plan = result.plan # デフォルト値を提供
         if not modified_text or not plan:
-            LOGGER.warning(f"No modified text or plan generated for user {user_id}")
+            LOGGER.warning(f"No modified text generated for user {user_id}")
             return False
 
         # 履歴を更新

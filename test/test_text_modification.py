@@ -29,14 +29,14 @@ def load_test_data():
 
 
 
-def test_combined_approach(
-    text_state: TextState, utterance: str, image_data: str, model: str = "gpt-4.1-nano"
+def test_mini_approach(
+    text_state: TextState, utterance: str, image_data: str
 ) -> Tuple[float, TextState]:
-    """新しいアプローチ（judge_and_plan_and_modify）をテスト"""
+    """gpt-4.1-miniを使ったアプローチをテスト"""
     usecase = TextModificationUseCase()
-    # モデルを指定して新しいCombinedJudgePlanModifyインスタンスを作成
+    # gpt-4.1-miniを指定してCombinedJudgePlanModifyインスタンスを作成
     from src.infra.gpt.combined_judge_plan_modify import CombinedJudgePlanModify
-    usecase.combined_judge_plan_modify = CombinedJudgePlanModify(model=model)
+    usecase.combined_judge_plan_modify = CombinedJudgePlanModify(model="gpt-4.1-mini")
     
     start_time = time.time()
     
@@ -46,12 +46,13 @@ def test_combined_approach(
         utterance,
         text_state.history_summary,
         image_data,
+        text_state.history,
     )
 
     if result.should_edit and result.modified_text:
         # planを出力
         if result.plan:
-            logger.info(f"Edit plan (Combined-{model}): {result.plan}")
+            logger.info(f"Edit plan: {result.plan}")
         
         # 履歴を更新
         history = TextModificationHistory(
@@ -74,7 +75,7 @@ def test_combined_approach(
 
 
 def main(utterance_sequence: list[str]):
-    logger.info("=== Text Modification Test Environment ===")
+    logger.info("=== Text Modification Test Environment (Mini Only) ===")
 
     # テストデータを読み込み
     original_text, image_data = load_test_data()
@@ -88,58 +89,40 @@ def main(utterance_sequence: list[str]):
         history_summary="",
     )
 
-    # 各発話を順番に処理して2つのCombinedアプローチを比較
-    combined_nano_state = initial_state
-    combined_mini_state = initial_state
-    
-    total_combined_nano_time = 0.0
-    total_combined_mini_time = 0.0
+    # gpt-4.1-miniでテスト
+    mini_state = initial_state
+    total_mini_time = 0.0
 
     for i, utterance in enumerate(utterance_sequence, 1):
         logger.info("=" * 80)
         logger.info(f"User input {i}: '{utterance}'")
         logger.info("=" * 80)
 
-        # 統合アプローチ（nano）をテスト
-        logger.info("--- Combined Approach with gpt-4.1-nano ---")
-        combined_nano_time, new_combined_nano_state = test_combined_approach(combined_nano_state, utterance, image_data, "gpt-4.1-nano")
-        total_combined_nano_time += combined_nano_time
-        logger.info(f"Combined nano approach time: {combined_nano_time:.2f}s")
-        logger.info(f"Combined nano result:\n{new_combined_nano_state.current_text}")
-
-        # 統合アプローチ（mini）をテスト
-        logger.info("--- Combined Approach with gpt-4.1-mini ---")
-        combined_mini_time, new_combined_mini_state = test_combined_approach(combined_mini_state, utterance, image_data, "gpt-4.1-mini")
-        total_combined_mini_time += combined_mini_time
-        logger.info(f"Combined mini approach time: {combined_mini_time:.2f}s")
-        logger.info(f"Combined mini result:\n{new_combined_mini_state.current_text}")
-
+        # gpt-4.1-miniでテスト
+        logger.info("--- Testing with gpt-4.1-mini ---")
+        mini_time, new_mini_state = test_mini_approach(mini_state, utterance, image_data)
+        total_mini_time += mini_time
+        logger.info(f"Processing time: {mini_time:.2f}s")
+        logger.info(f"Result:\n{new_mini_state.current_text}")
         
         # 状態を更新
-        combined_nano_state = new_combined_nano_state
-        combined_mini_state = new_combined_mini_state
+        mini_state = new_mini_state
 
-    # 最終的な比較結果
+    # 最終結果
     logger.info("=" * 80)
-    logger.info("=== FINAL COMPARISON ===")
+    logger.info("=== FINAL RESULT ===")
     logger.info("=" * 80)
-    logger.info(f"Total combined nano approach time: {total_combined_nano_time:.2f}s")
-    logger.info(f"Total combined mini approach time: {total_combined_mini_time:.2f}s")
+    logger.info(f"Total processing time: {total_mini_time:.2f}s")
     logger.info("")
-    logger.info(f"Nano vs Mini time difference: {total_combined_nano_time - total_combined_mini_time:.2f}s")
-    logger.info(f"{'Nano is faster' if total_combined_nano_time < total_combined_mini_time else 'Mini is faster'}")
-    logger.info("")
-    logger.info("Final text (Combined nano approach):")
-    logger.info(combined_nano_state.current_text)
-    logger.info("")
-    logger.info("Final text (Combined mini approach):")
-    logger.info(combined_mini_state.current_text)
+    logger.info("Final text:")
+    logger.info(mini_state.current_text)
 
 
 if __name__ == "__main__":
     utterances = [
         "こんにちは",
         "もう少し詳しく書きたい",
+        "元に戻して",
         "もっと魅力的にしたい",
         "短くまとめたい",
         "まだ長すぎる",
