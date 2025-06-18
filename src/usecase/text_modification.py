@@ -119,6 +119,7 @@ class TextModificationUseCase:
         utterance: str,
         history_summary: str,
         image_base64: str | None = None,
+        history: list[TextModificationHistory] | None = None,
     ) -> TextModificationResult:
         """判定・計画・修正を一つのGPTで実行する."""
         # リトライ機能付きで処理
@@ -131,6 +132,7 @@ class TextModificationUseCase:
                     utterance,
                     history_summary,
                     image_base64,
+                    history,
                 )
 
 

@@ -1,6 +1,7 @@
 from textwrap import dedent
 
 from src.infra.gpt.gpt_response import GptResponse
+from src.usecase.text_modification_types import TextModificationHistory
 
 
 class CombinedJudgePlanModify:
@@ -13,10 +14,22 @@ class CombinedJudgePlanModify:
         utterance: str,
         history_summary: str = "",
         image_base64: str | None = None,
+        history: list[TextModificationHistory] | None = None,
     ) -> str:
         history_context = (
             f"\n\n現在の編集における制約条件:\n{history_summary}" if history_summary else ""
         )
+        
+        # 編集履歴をフォーマット（最新の3つまで）
+        history_text = ""
+        if history and len(history) > 0:
+            recent_history = history[-3:]  # 最新の3つまで
+            history_text = "編集履歴:\n" + "\n".join(
+                [
+                    f"- 元文章: {h.original_text}\n  発話: {h.utterance}\n  計画: {h.edit_plan}\n  修正後: {h.modified_text}\n"
+                    for h in recent_history
+                ]
+            )
 
         # テキストに行番号を付与（空行はスキップ）
         lines = text.split("\n")
@@ -42,11 +55,13 @@ class CombinedJudgePlanModify:
                         - 具体的な変更指示だけでなく、「読みづらい」「情報が足りない」などのフィードバックの場合でも、修正を検討します。
                         - 咳払いや意味のない言葉、関係のない話題など、明らかにフィードバックでないものの場合は、修正は不要です。
                         - 商品説明文をそのまま読んでいるだけの場合なども想定されますが、その場合は修正は不要です。
+                        - 「元に戻して」系の発話の場合も修正を検討します。
 
                         ## ステップ2: 修正指示の生成（修正が必要な場合のみ）
                         修正が必要と判断した場合は、以下の方針で具体的な修正指示を生成してください：
                         - ユーザーから特段指示がない限りは、文章のスタイル（箇条書き、文体など）は基本的に維持する
                         - 制約条件が提示されている場合は、それらを考慮してバランスの取れた修正を提案する
+                        - 「元に戻して」系の発話の場合は、履歴から適切な過去の状態や特徴を特定して復元する
                         - 必要最小限の修正のみを行い、変更不要な行には言及しない
                         - フリマアプリの商品説明として適切な表現を心がける
                         - 画像の内容と説明文の整合性を確認する
@@ -108,6 +123,7 @@ class CombinedJudgePlanModify:
                     {"type": "text", "text": f"ユーザーの発話: {utterance}"},
                     {"type": "text", "text": f"制約条件: {history_context}"},
                 ]
+                + ([{"type": "text", "text": history_text}] if history_text else [])
                 + (
                     [
                         {
