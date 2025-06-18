@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from starlette.websockets import WebSocketDisconnect
 
 from src.infra.sounddevice.audio_streamer import AudioStreamer
-from src.infra.ws_transcriber.ws_transcriber import TranscriptionClient
+from src.infra.ws_transcriber.realtime_transcriber import TranscriptionClient
 from src.lib.env import ENV
 from src.lib.logger import LOGGER
 from src.usecase.generate_product_description import ProductDescriptionGenerator
@@ -94,7 +94,7 @@ async def process_single_utterance(
             return False
 
         modified_text = result.modified_text
-        plan = result.plan # デフォルト値を提供
+        plan = result.plan  # デフォルト値を提供
         if not modified_text or not plan:
             LOGGER.warning(f"No modified text generated for user {user_id}")
             return False
@@ -151,11 +151,12 @@ async def process_single_utterance(
 
 
 def should_process_buffer(user_id: str) -> bool:
-    """バッファを処理するべきかどうかを判定"""
+    """バッファを処理するべきかどうかを判定."""
     buffer = utterance_buffers.get(user_id, [])
 
     # 3つ以上溜まっている場合は処理
     if len(buffer) >= 3:
+        LOGGER.info(f"[{user_id}] バッファ満杯により処理開始 (件数: {len(buffer)})")
         return True
 
     # バッファが空の場合は処理しない
@@ -163,10 +164,17 @@ def should_process_buffer(user_id: str) -> bool:
         return False
 
     # 最後のdeltaから2秒以上経過している場合は処理
+    # Realtime APIではdeltaレスポンスがより頻繁に来るため、この判定が重要
     last_delta_time = last_delta_times.get(user_id, 0)
     current_time = time.time()
 
-    return current_time - last_delta_time >= 2.0
+    if current_time - last_delta_time >= 4.0:
+        LOGGER.info(
+            f"[{user_id}] タイムアウトにより処理開始 (経過時間: {current_time - last_delta_time:.1f}秒)",
+        )
+        return True
+
+    return False
 
 
 def get_utterances_to_process(user_id: str) -> list[str]:
@@ -350,14 +358,15 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                     data = await transcriber.parse_response(str(response))
 
                     if data["type"] == "delta":
-                        # delta受信時刻を記録
+                        # Realtime API: リアルタイム部分転写
                         last_delta_times[user_id] = time.time()
-                        LOGGER.debug(f"Delta received for user {user_id}")
+
+                        LOGGER.debug(f"⚡ Delta received for user {user_id}'")
 
                     elif data["type"] == "completed":
                         current_utterance = data["text"]
                         LOGGER.info(
-                            f"Transcription completed for user {user_id}: {current_utterance}",
+                            f"✅ Transcription completed for user {user_id}: {current_utterance}",
                         )
 
                         # 音声認識結果をフロントエンドに送信
@@ -368,12 +377,12 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                             },
                         )
 
-                        # 発話をバッファに追加
-                        if current_utterance.strip():  # 空文字列でない場合のみ追加
+                        # 発話をバッファに追加（空でない場合のみ）
+                        if current_utterance.strip():
                             utterance_buffers[user_id].append(current_utterance)
                             last_complete_times[user_id] = time.time()
                             LOGGER.info(
-                                f"Added utterance to buffer for user {user_id}. Buffer size: {len(utterance_buffers[user_id])}",
+                                f"📝 Added utterance to buffer for user {user_id}. Buffer size: {len(utterance_buffers[user_id])}",
                             )
 
                 except Exception as e:
@@ -396,7 +405,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         try:
             LOGGER.info(f"Cleaning up resources for user {user_id}...")
             # バックグラウンドタスクをキャンセル
-            if "buffer_check_task" in locals():
+            if "buffer_check_task" in locals() and buffer_check_task:
                 buffer_check_task.cancel()
                 try:
                     await buffer_check_task
