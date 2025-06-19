@@ -82,9 +82,7 @@ class TextModificationUseCase:
                     modification_instructions,
                 )
 
-                # LOGGER.info(f"result: {result}")
                 validation_ok = self.validator(result)
-                # LOGGER.info(f"validation_result: {validation_ok}")
 
                 # 商品説明文として適切かどうか検証
                 if not validation_ok:
@@ -92,9 +90,6 @@ class TextModificationUseCase:
                         f"Validation failed for attempt {attempt + 1}, result: {result[:100]}..."
                     )
                     if attempt < max_retries:
-                        # 検証に失敗した場合、より詳細な指示でリトライ
-                        retry_context = f"{history_context}\n\n前回の結果が商品説明文として不適切でした。編集指示や技術的な文言を含まず、自然で読みやすい商品説明文になるようにJSON形式で修正してください。"
-                        history_context = retry_context
                         continue
                     else:
                         # 最終的に検証に失敗した場合は元のテキストを返す
@@ -149,19 +144,14 @@ class TextModificationUseCase:
                         text,
                         modification_instructions,
                     )
-
-                    # LOGGER.info(f"combined_result: {modified_text}")
                     validation_ok = self.validator(modified_text)
-                    # LOGGER.info(f"combined_validation_result: {validation_ok}")
 
                     # 商品説明文として適切かどうか検証
                     if not validation_ok:
-                        LOGGER.warning(
-                            f"Combined validation failed for attempt {attempt + 1}, result: {modified_text[:100]}..."
+                        LOGGER.info(
+                            f"Combined validation failed for attempt {attempt + 1}, modification_instructions: {modification_instructions}, result: {modified_text[:100]}..."
                         )
                         if attempt < max_retries:
-                            # 検証に失敗した場合、より詳細な指示でリトライ
-                            history_summary = f"{history_summary}\n\n前回の結果が商品説明文として不適切でした。編集指示や技術的な文言を含まず、自然で読みやすい商品説明文になるようにJSON形式で修正してください。"
                             continue
                         else:
                             # 最終的に検証に失敗した場合は修正不要として返す
@@ -214,7 +204,7 @@ class TextModificationUseCase:
             return original_text
 
         except (json.JSONDecodeError, KeyError) as e:
-            LOGGER.error(f"JSON parsing error: {e}")
+            LOGGER.info(f"JSON parsing error: {e}, json_instructions: {json_instructions}")
             return original_text
 
     def _apply_json_content_modifications(

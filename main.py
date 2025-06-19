@@ -42,7 +42,6 @@ image_data: dict[str, str] = {}  # 新しい辞書を追加して画像データ
 processing_flags: dict[str, bool] = {}  # 処理中フラグを管理する辞書を追加
 utterance_buffers: dict[str, list[str]] = {}  # 完了した発話を格納するバッファ
 last_complete_times: dict[str, float] = {}  # 最後の完了時刻を記録
-last_delta_times: dict[str, float] = {}  # 最後のdelta受信時刻を記録
 
 
 async def process_single_utterance(
@@ -94,7 +93,7 @@ async def process_single_utterance(
             return False
 
         modified_text = result.modified_text
-        plan = result.plan # デフォルト値を提供
+        plan = result.plan  # デフォルト値を提供
         if not modified_text or not plan:
             LOGGER.warning(f"No modified text generated for user {user_id}")
             return False
@@ -151,22 +150,29 @@ async def process_single_utterance(
 
 
 def should_process_buffer(user_id: str) -> bool:
-    """バッファを処理するべきかどうかを判定"""
+    """バッファを処理するべきかどうかを判定."""
     buffer = utterance_buffers.get(user_id, [])
 
     # 3つ以上溜まっている場合は処理
     if len(buffer) >= 3:
+        LOGGER.info(f"[{user_id}] バッファ満杯により処理開始 (件数: {len(buffer)})")
         return True
 
     # バッファが空の場合は処理しない
     if not buffer:
         return False
 
-    # 最後のdeltaから2秒以上経過している場合は処理
-    last_delta_time = last_delta_times.get(user_id, 0)
+    # 最後の完了から4秒以上経過している場合は処理
+    last_complete_time = last_complete_times.get(user_id, 0)
     current_time = time.time()
 
-    return current_time - last_delta_time >= 2.0
+    if current_time - last_complete_time >= 4.0:
+        LOGGER.info(
+            f"[{user_id}] タイムアウトにより処理開始 (経過時間: {current_time - last_complete_time:.1f}秒)",
+        )
+        return True
+
+    return False
 
 
 def get_utterances_to_process(user_id: str) -> list[str]:
@@ -290,7 +296,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
     LOGGER.info(f"WebSocket connection established for user: {user_id}")
 
-    global text_states, processing_flags, utterance_buffers, last_complete_times, last_delta_times
+    global text_states, processing_flags, utterance_buffers, last_complete_times
     if user_id not in text_states:
         LOGGER.warning(f"No text has been set for user {user_id}, closing connection")
         await websocket.close(code=1000, reason="No text has been set")
@@ -300,7 +306,6 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     processing_flags[user_id] = False  # 初期状態は非処理中
     utterance_buffers[user_id] = []  # 発話バッファを初期化
     last_complete_times[user_id] = time.time()  # 最後の完了時刻を初期化
-    last_delta_times[user_id] = time.time()  # 最後のdelta時刻を初期化
 
     transcriber = None
     openai_ws = None
@@ -350,14 +355,13 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                     data = await transcriber.parse_response(str(response))
 
                     if data["type"] == "delta":
-                        # delta受信時刻を記録
-                        last_delta_times[user_id] = time.time()
-                        LOGGER.debug(f"Delta received for user {user_id}")
+                        # Realtime API: リアルタイム部分転写
+                        LOGGER.debug(f"⚡ Delta received for user {user_id}'")
 
                     elif data["type"] == "completed":
                         current_utterance = data["text"]
                         LOGGER.info(
-                            f"Transcription completed for user {user_id}: {current_utterance}",
+                            f"✅ Transcription completed for user {user_id}: {current_utterance}",
                         )
 
                         # 音声認識結果をフロントエンドに送信
@@ -368,12 +372,12 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                             },
                         )
 
-                        # 発話をバッファに追加
-                        if current_utterance.strip():  # 空文字列でない場合のみ追加
+                        # 発話をバッファに追加（空でない場合のみ）
+                        if current_utterance.strip():
                             utterance_buffers[user_id].append(current_utterance)
                             last_complete_times[user_id] = time.time()
                             LOGGER.info(
-                                f"Added utterance to buffer for user {user_id}. Buffer size: {len(utterance_buffers[user_id])}",
+                                f"📝 Added utterance to buffer for user {user_id}. Buffer size: {len(utterance_buffers[user_id])}",
                             )
 
                 except Exception as e:
@@ -396,7 +400,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         try:
             LOGGER.info(f"Cleaning up resources for user {user_id}...")
             # バックグラウンドタスクをキャンセル
-            if "buffer_check_task" in locals():
+            if "buffer_check_task" in locals() and buffer_check_task:
                 buffer_check_task.cancel()
                 try:
                     await buffer_check_task
