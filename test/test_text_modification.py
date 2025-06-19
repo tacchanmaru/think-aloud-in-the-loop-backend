@@ -2,7 +2,6 @@ import base64
 import os
 import sys
 import time
-from typing import Tuple
 
 # テスト用のログディレクトリを設定（importの前に設定）
 os.environ["LOG_DIR"] = "test/results"
@@ -31,14 +30,13 @@ def load_test_data():
 
 def test_mini_approach(
     text_state: TextState, utterance: str, image_data: str
-) -> Tuple[float, TextState]:
+) -> tuple[float, TextState]:
     """gpt-4.1-miniを使ったアプローチをテスト"""
     usecase = TextModificationUseCase()
-    # gpt-4.1-miniを指定してCombinedJudgePlanModifyインスタンスを作成
-    from src.infra.gpt.combined_judge_plan_modify import CombinedJudgePlanModify
-    usecase.combined_judge_plan_modify = CombinedJudgePlanModify(model="gpt-4.1-mini")
     
     start_time = time.time()
+    
+    logger.info(f"Processing utterance: {utterance}")
     
     # 判定・計画・修正を一度に実行
     result = usecase.judge_and_plan_and_modify(
@@ -49,24 +47,39 @@ def test_mini_approach(
         text_state.history,
     )
 
-    if result.should_edit and result.modified_text:
-        # planを出力
-        if result.plan:
-            logger.info(f"Edit plan: {result.plan}")
+    if not result.should_edit:
+        logger.info("No changes needed")
+        new_text_state = text_state
+    elif result.should_edit and result.modified_text:
+        modified_text = result.modified_text
+        plan = result.plan
         
-        # 履歴を更新
-        history = TextModificationHistory(
-            utterance=utterance,
-            edit_plan=result.edit_plan or "Combined approach",
-            original_text=text_state.current_text,
-            modified_text=result.modified_text,
-        )
-        new_text_state = TextState(
-            original_text=text_state.original_text,
-            current_text=result.modified_text,
-            history=text_state.history + [history],
-            history_summary=usecase.update_history_summary(text_state.history + [history]),
-        )
+        if not modified_text or not plan:
+            logger.warning("No modified text generated")
+            new_text_state = text_state
+        else:
+            # planを出力
+            logger.info(f"Edit plan: {plan}")
+            
+            # 履歴を更新
+            history = TextModificationHistory(
+                utterance=utterance,
+                edit_plan=plan,
+                original_text=text_state.current_text,
+                modified_text=modified_text,
+            )
+            text_state.history.append(history)
+            text_state.current_text = modified_text
+            
+            # history_summaryを更新
+            try:
+                new_summary = usecase.update_history_summary(text_state.history)
+                text_state.history_summary = new_summary
+                logger.info(f"Updated history summary: {text_state.history_summary}")
+            except Exception as e:
+                logger.error(f"Error updating history summary: {e}")
+            
+            new_text_state = text_state
     else:
         new_text_state = text_state
     
@@ -122,10 +135,10 @@ if __name__ == "__main__":
     utterances = [
         "こんにちは",
         "もう少し詳しく書きたい",
-        "元に戻して",
-        "もっと魅力的にしたい",
-        "短くまとめたい",
-        "まだ長すぎる",
+        "状態について詳しく教えて",
+        "状態というか、どういうふうに使っていたかを書くべきかも",
+        "状態も、種類などと合わせて箇条書きにして",
+        "この文章で高く売れるかなー",
     ]
 
     main(utterances)
