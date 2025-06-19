@@ -84,6 +84,8 @@ class CombinedJudgePlanModify:
 
                         should_editが"no"の場合はplanは空文字列、contentは空配列にしてください。
                         should_editが"yes"の場合は修正方針をplanに、修正指示をcontentに配列で含めてください。
+                                       
+                        addは行番号の次に追加します。
 
                         ## 注意点
                         - JSON形式のみを返してください。説明や理由は含めないでください
@@ -112,7 +114,7 @@ class CombinedJudgePlanModify:
                             "plan": "状態の情報を箇条書きの項目として追加します。",
                             "content": [
                                 {
-                                    "line": 5,
+                                    "line": 4,
                                     "command": "add",
                                     "text": "- 状態: 目立った汚れや傷はなく、美品です"
                                 },
@@ -120,9 +122,18 @@ class CombinedJudgePlanModify:
                                     "line": 6,
                                     "command": "delete",
                                     "text": ""
-                                }
+                                },
                             ]
                         }
+                                       
+                        目指すテキスト:
+                        1: ふわふわの白いイタチのぬいぐるみです。
+                        2: - 種類: イタチのぬいぐるみ
+                        3: - カラー: ホワイト（しっぽは黒）
+                        4: - サイズ: 約20cm
+                        5: - 状態: 目立った汚れや傷はなく、美品です
+                        6: 
+                        7: ご覧いただきありがとうございます。
                         """),  # noqa: E501, RUF001
                     },
                 ],
