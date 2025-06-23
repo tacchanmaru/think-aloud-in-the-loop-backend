@@ -139,6 +139,15 @@ async def process_single_utterance(
             )
             text_state.history_summary = new_summary
             LOGGER.info(f"[{user_id}] Updated constraints: {text_state.history_summary}")
+            
+            # history_summary更新をフロントエンドに送信
+            await websocket.send_json(
+                {
+                    "type": "history_summary_updated",
+                    "history_summary": text_state.history_summary,
+                }
+            )
+            LOGGER.info(f"History summary update sent to frontend for user {user_id}")
         except Exception as e:
             LOGGER.error(f"Error updating history summary for user {user_id}: {e}")
 
